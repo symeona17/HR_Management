@@ -1,18 +1,24 @@
+import os
+from dotenv import load_dotenv
 import mysql.connector
-import json
 
-# Load credentials from JSON file
-with open("config.json", "r") as config_file:
-    config = json.load(config_file)
+# Load environment variables from .env file
+load_dotenv()
+
+# Fetch credentials from environment variables
+host = os.getenv("DB_HOST")
+user = os.getenv("DB_USER")
+password = os.getenv("DB_PASSWORD")
+database = os.getenv("DB_NAME")
 
 # Create a database connection
 def create_connection():
     try:
         return mysql.connector.connect(
-            host=config["host"],
-            user=config["user"],
-            password=config["password"],
-            database=config["database"]
+            host=host,
+            user=user,
+            password=password,
+            database=database
         )
     except mysql.connector.Error as e:
         print(f"Error connecting to database: {e}")
