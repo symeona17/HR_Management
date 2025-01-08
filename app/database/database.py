@@ -26,6 +26,8 @@ def create_connection():
 
 # General function to execute a query
 def execute_query(query, values=None):
+    conn = None
+    cursor = None
     try:
         conn = create_connection()
         cursor = conn.cursor()
@@ -36,11 +38,15 @@ def execute_query(query, values=None):
         print(f"Query execution error: {e}")
         raise
     finally:
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 # General function to fetch results
 def fetch_results(query, values=None):
+    conn = None
+    cursor = None
     try:
         conn = create_connection()
         cursor = conn.cursor(dictionary=True)  # Use dictionary=True for easier result handling
@@ -50,5 +56,7 @@ def fetch_results(query, values=None):
         print(f"Error fetching results: {e}")
         raise
     finally:
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
