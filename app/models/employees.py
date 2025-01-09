@@ -2,7 +2,8 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import mysql.connector
-from app.database import create_connection
+from app.database import create_connection, fetch_results
+from app.models.training import add_training, add_training_need, get_employee_trainings
 
 router = APIRouter()
 
@@ -76,3 +77,44 @@ def delete_employee(employee_id: int):
     cursor.close()
     conn.close()
     return {"message": "Employee deleted successfully"}
+
+
+# Function to search employees by various attributes and return detailed data
+def search_employees(name=None, surname=None, email=None, department=None):
+    # Start building the query with a basic SELECT
+    query = """
+    SELECT e.id AS employee_id, e.first_name, e.last_name, e.email, e.hire_date, e.department, e.job_title,
+           GROUP_CONCAT(DISTINCT CONCAT(t.title, ' (', t.category, ')') ORDER BY t.title) AS trainings,
+           GROUP_CONCAT(DISTINCT CONCAT(feedback.feedback_date, ' - ', feedback.sentiment_score, ' - ', feedback.comments) ORDER BY feedback.feedback_date) AS feedback,
+           GROUP_CONCAT(DISTINCT CONCAT(t2.title, ' (', tn.recommendation_level, '/5)') ORDER BY tn.recommended_training_id) AS training_needs
+    FROM employees e
+    LEFT JOIN employee_training et ON e.id = et.employee_id
+    LEFT JOIN training t ON et.training_id = t.id
+    LEFT JOIN feedback ON e.id = feedback.employee_id
+    LEFT JOIN training_needs tn ON e.id = tn.employee_id
+    LEFT JOIN training t2 ON tn.recommended_training_id = t2.id
+    WHERE 1=1
+    """
+    values = []
+    
+    # Add conditions dynamically based on which fields are provided
+    if name:
+        query += " AND e.first_name LIKE %s"
+        values.append(f"%{name}%")
+    if surname:
+        query += " AND e.last_name LIKE %s"
+        values.append(f"%{surname}%")
+    if email:
+        query += " AND e.email LIKE %s"
+        values.append(f"%{email}%")
+    if department:
+        query += " AND e.department LIKE %s"
+        values.append(f"%{department}%")
+    
+    query += " GROUP BY e.id;"  # Ensure that we group by employee_id
+    
+    # Fetch results from the database
+    results = fetch_results(query, tuple(values))
+    
+    # Return the list of employees directly, not wrapped in another 'employees' object
+    return {"employees": results}
