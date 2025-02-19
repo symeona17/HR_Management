@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import mysql.connector
 from app.database import create_connection, fetch_results
-from app.models.training import add_training, add_training_need, get_employee_trainings
+from app.models.training import add_training, add_training_need, get_employee_training
 
 router = APIRouter()
 
@@ -21,7 +21,7 @@ def insert_employee(employee: Employee):
     conn = create_connection()
     cursor = conn.cursor()
     query = """
-    INSERT INTO employees (first_name, last_name, email, hire_date, department, job_title)
+    INSERT INTO employee (first_name, last_name, email, hire_date, department, job_title)
     VALUES (%s, %s, %s, %s, %s, %s)
     """
     values = (employee.first_name, employee.last_name, employee.email, employee.hire_date, employee.department, employee.job_title)
@@ -30,7 +30,7 @@ def insert_employee(employee: Employee):
     cursor.close()
     conn.close()
 
-# Route to create a new employee
+# Route to create a new employees
 @router.post("/")
 def create_employee(employee: Employee):
     try:
@@ -41,22 +41,22 @@ def create_employee(employee: Employee):
 
 # Route to get all employees
 @router.get("/")
-def get_employees():
+def get_employee():
     conn = create_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM employees")
-    employees = cursor.fetchall()
+    cursor.execute("SELECT * FROM employee")
+    employee = cursor.fetchall()
     cursor.close()
     conn.close()
-    return {"employees": employees}
+    return {"employee": employee}
 
-# Route to update an existing employee
+# Route to update an existing employees
 @router.put("/{employee_id}")
 def update_employee(employee_id: int, employee: Employee):
     conn = create_connection()
     cursor = conn.cursor()
     query = """
-    UPDATE employees
+    UPDATE employee
     SET first_name = %s, last_name = %s, email = %s, hire_date = %s, department = %s, job_title = %s
     WHERE id = %s
     """
@@ -72,7 +72,7 @@ def update_employee(employee_id: int, employee: Employee):
 def delete_employee(employee_id: int):
     conn = create_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM employees WHERE id = %s", (employee_id,))
+    cursor.execute("DELETE FROM employee WHERE id = %s", (employee_id,))
     conn.commit()
     cursor.close()
     conn.close()
@@ -80,18 +80,18 @@ def delete_employee(employee_id: int):
 
 
 # Function to search employees by various attributes and return detailed data
-def search_employees(name=None, surname=None, email=None, department=None):
+def search_employee(name=None, surname=None, email=None, department=None):
     # Start building the query with a basic SELECT
     query = """
     SELECT e.id AS employee_id, e.first_name, e.last_name, e.email, e.hire_date, e.department, e.job_title,
-           GROUP_CONCAT(DISTINCT CONCAT(t.title, ' (', t.category, ')') ORDER BY t.title) AS trainings,
+           GROUP_CONCAT(DISTINCT CONCAT(t.title, ' (', t.category, ')') ORDER BY t.title) AS training,
            GROUP_CONCAT(DISTINCT CONCAT(feedback.feedback_date, ' - ', feedback.sentiment_score, ' - ', feedback.comments) ORDER BY feedback.feedback_date) AS feedback,
-           GROUP_CONCAT(DISTINCT CONCAT(t2.title, ' (', tn.recommendation_level, '/5)') ORDER BY tn.recommended_training_id) AS training_needs
-    FROM employees e
+           GROUP_CONCAT(DISTINCT CONCAT(t2.title, ' (', tn.recommendation_level, '/5)') ORDER BY tn.recommended_training_id) AS training_need
+    FROM employee e
     LEFT JOIN employee_training et ON e.id = et.employee_id
     LEFT JOIN training t ON et.training_id = t.id
     LEFT JOIN feedback ON e.id = feedback.employee_id
-    LEFT JOIN training_needs tn ON e.id = tn.employee_id
+    LEFT JOIN training_need tn ON e.id = tn.employee_id
     LEFT JOIN training t2 ON tn.recommended_training_id = t2.id
     WHERE 1=1
     """
@@ -117,4 +117,4 @@ def search_employees(name=None, surname=None, email=None, department=None):
     results = fetch_results(query, tuple(values))
     
     # Return the list of employees directly, not wrapped in another 'employees' object
-    return {"employees": results}
+    return {"employee": results}

@@ -16,7 +16,7 @@ def insert_skill(skill: Skill):
     conn = create_connection()
     cursor = conn.cursor()
     query = """
-    INSERT INTO skills (name, category)
+    INSERT INTO skill (name, category)
     VALUES (%s, %s)
     """
     values = (skill.name, skill.category)
@@ -39,8 +39,8 @@ def create_skill(skill: Skill):
 def get_skills():
     conn = create_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM skills")
-    skills = cursor.fetchall()
+    cursor.execute("SELECT * FROM skill")
+    skill = cursor.fetchall()
     cursor.close()
     conn.close()
-    return {"skills": skills}
+    return {"skill": skill}
