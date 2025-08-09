@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { fetchEmployees } from '../utils/api';
 import NavBar from '../components/NavBar';
+import AddEmployeeOverlay from '../components/AddEmployeeOverlay';
+
 
 type Employee = {
   employee_id: number;
@@ -16,6 +18,8 @@ const EmployeesPage = () => {
   const [filtered, setFiltered] = useState<Employee[]>([]);
   const [department, setDepartment] = useState('Any');
   const [search, setSearch] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     const getEmployees = async () => {
@@ -77,7 +81,39 @@ const EmployeesPage = () => {
             <option key={dep} value={dep}>{dep}</option>
           ))}
         </select>
+        {/* Add Employee Button */}
+        <button
+          style={{
+            position: 'absolute',
+            left: 31,
+            bottom: 32,
+            width: 181,
+            height: 40,
+            background: '#3FD270',
+            color: 'white',
+            border: 'none',
+            borderRadius: 8,
+            fontSize: 16,
+            fontFamily: 'Montserrat',
+            fontWeight: 600,
+            cursor: 'pointer',
+            zIndex: 30,
+          }}
+          onClick={() => setShowAdd(true)}
+        >
+          Add Employee
+        </button>
       </div>
+      <AddEmployeeOverlay
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        onSuccess={() => setShowAdd(false)}
+        fetchEmployees={async () => {
+          const data = await fetchEmployees();
+          setEmployees(data.employee);
+          setFiltered(data.employee);
+        }}
+      />
       {/* Employee Cards Grid */}
       <div
         style={{

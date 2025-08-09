@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import NavBar from '../components/NavBar';
+import AddEmployeeOverlay from '../components/AddEmployeeOverlay';
 import { fetchEmployees, fetchTrainings } from '../utils/api';
 
 
 const Home: React.FC = () => {
   const [totalEmployees, setTotalEmployees] = useState<number | null>(null);
   const [ongoingTrainings, setOngoingTrainings] = useState<number | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
 
   useEffect(() => {
     const getTotalEmployees = async () => {
@@ -111,13 +113,34 @@ const Home: React.FC = () => {
         <div style={{ width: 300, height: 400, background: 'white', borderRadius: 15, border: '2px #D9D9D9 solid', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 24, boxSizing: 'border-box' }}>
           <div style={{ color: 'black', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 700, marginBottom: 16 }}>Quick Actions</div>
           <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
-            <button style={{ width: '100%', height: 54, background: '#F5F5F5', borderRadius: 5, border: '1.5px #D9D9D9 solid', color: 'black', fontSize: 14, fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }}>Add New Employee</button>
+            <button
+              style={{ width: '100%', height: 54, background: '#F5F5F5', borderRadius: 5, border: '1.5px #D9D9D9 solid', color: 'black', fontSize: 14, fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }}
+              onClick={() => setShowAdd(true)}
+            >
+              Add New Employee
+            </button>
             <button style={{ width: '100%', height: 54, background: '#F5F5F5', borderRadius: 5, border: '1.5px #D9D9D9 solid', color: 'black', fontSize: 14, fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }}>Assign Training</button>
             <button style={{ width: '100%', height: 54, background: '#F5F5F5', borderRadius: 5, border: '1.5px #D9D9D9 solid', color: 'black', fontSize: 14, fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }}>Generate Report</button>
             <button style={{ width: '100%', height: 54, background: '#F5F5F5', borderRadius: 5, border: '1.5px #D9D9D9 solid', color: 'black', fontSize: 14, fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }}>Export Data</button>
           </div>
         </div>
       </div>
+      <AddEmployeeOverlay
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        onSuccess={async () => {
+          setShowAdd(false);
+          // Refresh employee count
+          try {
+            const data = await fetchEmployees();
+            setTotalEmployees(Array.isArray(data.employee) ? data.employee.length : 0);
+          } catch {}
+        }}
+        fetchEmployees={async () => {
+          const data = await fetchEmployees();
+          setTotalEmployees(Array.isArray(data.employee) ? data.employee.length : 0);
+        }}
+      />
     </div>
   );
 };
