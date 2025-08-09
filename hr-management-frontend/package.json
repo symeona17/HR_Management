@@ -1,0 +1,28 @@
+{
+  "name": "hr-management-frontend",
+  "version": "1.0.0",
+  "description": "Frontend interface for the HR Management application",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "axios": "^0.21.1",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "24.2.1",
+    "@types/react": "19.1.9",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "typescript": "latest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}

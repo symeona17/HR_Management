@@ -1,8 +1,18 @@
 from fastapi import FastAPI, Query
 from app.models.employee import router as employee_router, search_employee
 from app.models.skill import router as skills_router
+# Add this to your main.py
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Or specify your frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Include the routers from employees and skills modules
 app.include_router(employee_router, prefix="/employee", tags=["employee"])

@@ -18,3 +18,7 @@ venv/
 # OS-specific files
 .DS_Store
 Thumbs.db
+
+# Node 
+.next/
+node_modules/
