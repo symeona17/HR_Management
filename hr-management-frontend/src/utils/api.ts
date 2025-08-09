@@ -1,3 +1,9 @@
+// Function to fetch all trainings
+export async function fetchTrainings() {
+    const res = await fetch('http://localhost:8000/training/');
+    if (!res.ok) throw new Error('Failed to fetch trainings');
+    return await res.json();
+}
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8000'; // Adjust the base URL as needed

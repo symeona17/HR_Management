@@ -53,14 +53,22 @@ const EmployeesPage = () => {
     <div style={{ width: '100vw', minHeight: '100vh', minWidth: 320, position: 'relative', background: '#F5F5F5', overflow: 'auto' }}>
       <NavBar showSearch onSearchChange={setSearch} />
       {/* Sidebar Filters */}
-      <div style={{ width: 241, minHeight: '800px', left: 0, top: 100, position: 'absolute', overflow: 'hidden' }}>
-        <div style={{ width: 241, height: 899, left: 0, top: -99, position: 'absolute', background: 'white', border: '1px #D9D9D9 solid' }} />
-        <div style={{ width: 78, height: 32, left: 96, top: 43, position: 'absolute', textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: '#717171', fontSize: 22, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '22px' }}>Filters</div>
-        <div style={{ position: 'absolute', left: 31, top: 95, color: '#717171', fontSize: 18, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '18px' }}>
+      <div style={{
+        width: 241,
+        height: 'calc(100vh - 60px)',
+        position: 'fixed',
+        top: 60,
+        left: 0,
+        overflow: 'hidden',
+        zIndex: 20,
+      }}>
+        <div style={{ width: 241, height: '100%', left: 0, top: 0, position: 'absolute', background: 'white', border: '1px #D9D9D9 solid' }} />
+        <div style={{ width: 78, height: 32, left: 96, top: 63, position: 'absolute', textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: '#717171', fontSize: 22, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '22px' }}>Filters</div>
+        <div style={{ position: 'absolute', left: 31, top: 115, color: '#717171', fontSize: 18, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '18px' }}>
           Department
         </div>
         <select
-          style={{ position: 'absolute', left: 31, top: 119, width: 181, height: 35, borderRadius: 10, border: '1px #D5D5D5 solid', background: '#F5F5F5', fontSize: 18, fontFamily: 'Montserrat', paddingLeft: 12 }}
+          style={{ position: 'absolute', left: 31, top: 139, width: 181, height: 35, borderRadius: 10, border: '1px #D5D5D5 solid', background: '#F5F5F5', fontSize: 18, fontFamily: 'Montserrat', paddingLeft: 12 }}
           value={department}
           onChange={e => setDepartment(e.target.value)}
         >

@@ -1,7 +1,8 @@
+
 from fastapi import FastAPI, Query
 from app.models.employee import router as employee_router, search_employee
 from app.models.skill import router as skills_router
-# Add this to your main.py
+from app.models.training import get_all_trainings
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -17,6 +18,15 @@ app.add_middleware(
 # Include the routers from employees and skills modules
 app.include_router(employee_router, prefix="/employee", tags=["employee"])
 app.include_router(skills_router, prefix="/skill", tags=["skill"])
+
+# Endpoint to get all trainings
+@app.get("/training/")
+def get_trainings():
+    try:
+        results = get_all_trainings()
+        return {"trainings": results}
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.get("/")
 def read_root():

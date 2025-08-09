@@ -1,8 +1,40 @@
-import React from 'react';
-import NavBar from '../components/NavBar'; 
+import React, { useEffect, useState } from 'react';
+import NavBar from '../components/NavBar';
+import { fetchEmployees, fetchTrainings } from '../utils/api';
 
 
 const Home: React.FC = () => {
+  const [totalEmployees, setTotalEmployees] = useState<number | null>(null);
+  const [ongoingTrainings, setOngoingTrainings] = useState<number | null>(null);
+
+  useEffect(() => {
+    const getTotalEmployees = async () => {
+      try {
+        const data = await fetchEmployees();
+        setTotalEmployees(Array.isArray(data.employee) ? data.employee.length : 0);
+      } catch (e) {
+        setTotalEmployees(null);
+      }
+    };
+    getTotalEmployees();
+  }, []);
+
+  useEffect(() => {
+    const getOngoingTrainings = async () => {
+      try {
+        const data = await fetchTrainings();
+        const now = new Date();
+        const ongoing = Array.isArray(data.trainings)
+          ? data.trainings.filter((t: any) => t.end_date && new Date(t.end_date) >= now).length
+          : 0;
+        setOngoingTrainings(ongoing);
+      } catch (e) {
+        setOngoingTrainings(null);
+      }
+    };
+    getOngoingTrainings();
+  }, []);
+
   return (
     <div
       style={{
@@ -14,62 +46,77 @@ const Home: React.FC = () => {
         background: '#F5F5F5',
         overflow: 'auto',
       }}
-    >  
-    <NavBar />
-      {/* Overview Card */}
-      <div style={{ width: 300, height: 400, left: 49, top: 192, position: 'absolute' }}>
-        <div style={{ width: 300, height: 400, left: 0, top: 0, position: 'absolute', background: 'white', borderRadius: 15, border: '2px #D9D9D9 solid' }} />
-        <div style={{ width: 52, height: 34, left: 25, top: 108, position: 'absolute', textAlign: 'right', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 18, fontFamily: 'Montserrat', fontWeight: 700, lineHeight: '36px', wordWrap: 'break-word' }}>64</div>
-        <div style={{ width: 129, height: 22, left: 93, top: 114, position: 'absolute', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 14, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '28px', wordWrap: 'break-word' }}>Total Employees</div>
-        <div style={{ width: 52, height: 34, left: 24, top: 158, position: 'absolute', textAlign: 'right', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 18, fontFamily: 'Montserrat', fontWeight: 700, lineHeight: '36px', wordWrap: 'break-word' }}>7</div>
-        <div style={{ left: 92, top: 160.67, position: 'absolute', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 14, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '28px', wordWrap: 'break-word' }}>Ongoing Trainings</div>
-        <div style={{ width: 52, height: 34, left: 24, top: 208, position: 'absolute', textAlign: 'right', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 18, fontFamily: 'Montserrat', fontWeight: 700, lineHeight: '36px', wordWrap: 'break-word' }}>56%</div>
-        <div style={{ left: 92, top: 210.67, position: 'absolute', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 14, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '28px', wordWrap: 'break-word' }}>Average Training Progress</div>
-        <div style={{ width: 52, height: 34, left: 24, top: 258, position: 'absolute', textAlign: 'right', justifyContent: 'center', display: 'flex', flexDirection: 'column' }}>
-          <span style={{ color: 'black', fontSize: 18, fontFamily: 'Montserrat', fontWeight: 700, lineHeight: '36px', wordWrap: 'break-word' }}>8.9</span>
-          <span style={{ color: 'black', fontSize: 14, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '28px', wordWrap: 'break-word' }}>/10</span>
+    >
+      <NavBar />
+      {/* Cards Grid */}
+      <div
+        style={{
+          marginTop: 100,
+          padding: '32px',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+          gap: 32,
+          justifyItems: 'center',
+        }}
+      >
+        {/* Overview Card */}
+        <div style={{ width: 300, height: 400, background: 'white', borderRadius: 15, border: '2px #D9D9D9 solid', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 24, boxSizing: 'border-box' }}>
+          <div style={{ color: 'black', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 700, marginBottom: 24 }}>Overview</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', rowGap: 16, columnGap: 8, width: '100%' }}>
+      <div style={{ color: 'black', fontSize: 18, fontWeight: 700, textAlign: 'right' }}>{totalEmployees !== null ? totalEmployees : '...'}</div>
+            <div style={{ color: 'black', fontSize: 14, fontWeight: 400, alignSelf: 'center' }}>Total Employees</div>
+            <div style={{ color: 'black', fontSize: 18, fontWeight: 700, textAlign: 'right' }}>{ongoingTrainings !== null ? ongoingTrainings : '...'}</div>
+            <div style={{ color: 'black', fontSize: 14, fontWeight: 400, alignSelf: 'center' }}>Ongoing Trainings</div>
+            <div style={{ color: 'black', fontSize: 18, fontWeight: 700, textAlign: 'right' }}>56%</div>
+            <div style={{ color: 'black', fontSize: 14, fontWeight: 400, alignSelf: 'center' }}>Average Training Progress</div>
+            <div style={{ color: 'black', fontSize: 18, fontWeight: 700, textAlign: 'right' }}>8.9<span style={{ color: 'black', fontSize: 14, fontWeight: 400 }}>/10</span></div>
+            <div style={{ color: 'black', fontSize: 14, fontWeight: 400, alignSelf: 'center' }}>Satisfaction Score</div>
+          </div>
+          <div style={{ marginTop: 'auto', alignSelf: 'center', width: 42, height: 42, borderRadius: 5, outline: '3px #3FD270 solid', outlineOffset: '-1.50px', marginBottom: 8 }} />
+          <div style={{ alignSelf: 'center', width: 6, height: 12, transform: 'rotate(-135deg)', outline: '3px #3FD270 solid', outlineOffset: '-1.50px' }} />
         </div>
-        <div style={{ left: 92, top: 260.67, position: 'absolute', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 14, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '28px', wordWrap: 'break-word' }}>Satisfaction Score</div>
-        <div style={{ left: 100, top: 33, position: 'absolute', textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 700, lineHeight: '40px', wordWrap: 'break-word' }}>Overview</div>
-        <div style={{ width: 42, height: 42, left: 125, top: 318, position: 'absolute', borderRadius: 5, outline: '3px #3FD270 solid', outlineOffset: '-1.50px' }} />
-        <div style={{ width: 5.94, height: 11.88, left: 144.95, top: 342.15, position: 'absolute', transform: 'rotate(-135deg)', transformOrigin: 'top left', outline: '3px #3FD270 solid', outlineOffset: '-1.50px' }} />
-      </div>
-      {/* Training Insights Card */}
-      <div style={{ width: 300, height: 400, left: 396, top: 192, position: 'absolute' }}>
-        <div style={{ width: 300, height: 400, left: 0, top: 0, position: 'absolute', background: 'white', borderRadius: 15, border: '2px #D9D9D9 solid' }} />
-        <div style={{ left: 62, top: 33, position: 'absolute', textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 700, lineHeight: '40px', wordWrap: 'break-word' }}>Training Insights</div>
-        <div style={{ left: 48, top: 103, position: 'absolute', textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 16, fontFamily: 'Montserrat', fontWeight: 700, lineHeight: '32px', wordWrap: 'break-word' }}>Top Performing Courses</div>
-        <div style={{ left: 82, top: 135, position: 'absolute', textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 14, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '28px', wordWrap: 'break-word' }}>Cybersecurity<br />Time Management<br />Presentation</div>
-        <div style={{ left: 44, top: 219, position: 'absolute', textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 16, fontFamily: 'Montserrat', fontWeight: 700, lineHeight: '32px', wordWrap: 'break-word' }}>Recommended Trainings</div>
-        <div style={{ left: 78, top: 251, position: 'absolute', textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 14, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '28px', wordWrap: 'break-word' }}>Cybersecurity<br />Time Management<br />Presentation</div>
-      </div>
-      {/* Upcoming Deadlines Card */}
-      <div style={{ width: 300, height: 400, left: 743, top: 192, position: 'absolute' }}>
-        <div style={{ width: 300, height: 400, left: 0, top: 0, position: 'absolute', background: 'white', borderRadius: 15, border: '2px #D9D9D9 solid' }} />
-        <div style={{ left: 40, top: 33, position: 'absolute', textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 700, lineHeight: '40px', wordWrap: 'break-word' }}>Upcoming Deadlines</div>
-        <div style={{ left: 69, top: 100, position: 'absolute', textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column' }}>
-          <span style={{ color: 'black', fontSize: 16, fontFamily: 'Montserrat', fontWeight: 700, lineHeight: '32px', wordWrap: 'break-word' }}>09/04  </span>
-          <span style={{ color: 'black', fontSize: 16, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '32px', wordWrap: 'break-word' }}>Presentation<br /></span>
-          <span style={{ color: 'black', fontSize: 16, fontFamily: 'Montserrat', fontWeight: 700, lineHeight: '32px', wordWrap: 'break-word' }}>12/04</span>
-          <span style={{ color: 'black', fontSize: 16, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '32px', wordWrap: 'break-word' }}>  Task 1<br /></span>
-          <span style={{ color: 'black', fontSize: 16, fontFamily: 'Montserrat', fontWeight: 700, lineHeight: '32px', wordWrap: 'break-word' }}>12/04</span>
-          <span style={{ color: 'black', fontSize: 16, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '32px', wordWrap: 'break-word' }}>  Task 1<br /></span>
-          <span style={{ color: 'black', fontSize: 16, fontFamily: 'Montserrat', fontWeight: 700, lineHeight: '32px', wordWrap: 'break-word' }}>12/04</span>
-          <span style={{ color: 'black', fontSize: 16, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '32px', wordWrap: 'break-word' }}>  Task 1<br /></span>
+        {/* Training Insights Card */}
+        <div style={{ width: 300, height: 400, background: 'white', borderRadius: 15, border: '2px #D9D9D9 solid', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 24, boxSizing: 'border-box' }}>
+          <div style={{ color: 'black', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 700, marginBottom: 16 }}>Training Insights</div>
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div>
+              <div style={{ color: 'black', fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Top Performing Courses</div>
+              <div style={{ color: 'black', fontSize: 14, fontWeight: 400, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span>Cybersecurity</span>
+                <span>Time Management</span>
+                <span>Presentation</span>
+              </div>
+            </div>
+            <div>
+              <div style={{ color: 'black', fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Recommended Trainings</div>
+              <div style={{ color: 'black', fontSize: 14, fontWeight: 400, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span>Cybersecurity</span>
+                <span>Time Management</span>
+                <span>Presentation</span>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-      {/* Quick Actions Card */}
-      <div style={{ width: 300, height: 400, left: 1090, top: 192, position: 'absolute' }}>
-        <div style={{ width: 300, height: 400, left: 0, top: 0, position: 'absolute', background: 'white', borderRadius: 15, border: '2px #D9D9D9 solid' }} />
-        <div style={{ left: 77, top: 33, position: 'absolute', textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 700, lineHeight: '40px', wordWrap: 'break-word' }}>Quick Actions</div>
-        <div style={{ width: 124, height: 54, left: 88, top: 85, position: 'absolute', background: '#F5F5F5', borderRadius: 5, border: '1.50px #D9D9D9 solid' }} />
-        <div style={{ width: 87.53, height: 39.38, left: 107.45, top: 93.62, position: 'absolute', textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 14, fontFamily: 'Montserrat', fontWeight: 500, lineHeight: '21px', wordWrap: 'break-word' }}>Add New Employee</div>
-        <div style={{ width: 124, height: 54, left: 88, top: 163, position: 'absolute', background: '#F5F5F5', borderRadius: 5, border: '1.50px #D9D9D9 solid' }} />
-        <div style={{ width: 87.53, height: 39.38, left: 107.45, top: 171.62, position: 'absolute', textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 14, fontFamily: 'Montserrat', fontWeight: 500, lineHeight: '21px', wordWrap: 'break-word' }}>Assign Training</div>
-        <div style={{ width: 124, height: 54, left: 89, top: 241, position: 'absolute', background: '#F5F5F5', borderRadius: 5, border: '1.50px #D9D9D9 solid' }} />
-        <div style={{ width: 87.53, height: 39.38, left: 108.45, top: 249.62, position: 'absolute', textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 14, fontFamily: 'Montserrat', fontWeight: 500, lineHeight: '21px', wordWrap: 'break-word' }}>Generate Report</div>
-        <div style={{ width: 124, height: 54, left: 88, top: 319, position: 'absolute', background: '#F5F5F5', borderRadius: 5, border: '1.50px #D9D9D9 solid' }} />
-        <div style={{ width: 87.53, height: 39.38, left: 107.45, top: 327.62, position: 'absolute', textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: 'black', fontSize: 14, fontFamily: 'Montserrat', fontWeight: 500, lineHeight: '21px', wordWrap: 'break-word' }}>Export<br />Data</div>
+        {/* Upcoming Deadlines Card */}
+        <div style={{ width: 300, height: 400, background: 'white', borderRadius: 15, border: '2px #D9D9D9 solid', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 24, boxSizing: 'border-box' }}>
+          <div style={{ color: 'black', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 700, marginBottom: 16 }}>Upcoming Deadlines</div>
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ color: 'black', fontSize: 16, fontWeight: 700 }}>09/04 <span style={{ fontWeight: 400 }}>Presentation</span></div>
+            <div style={{ color: 'black', fontSize: 16, fontWeight: 700 }}>12/04 <span style={{ fontWeight: 400 }}>Task 1</span></div>
+            <div style={{ color: 'black', fontSize: 16, fontWeight: 700 }}>12/04 <span style={{ fontWeight: 400 }}>Task 1</span></div>
+            <div style={{ color: 'black', fontSize: 16, fontWeight: 700 }}>12/04 <span style={{ fontWeight: 400 }}>Task 1</span></div>
+          </div>
+        </div>
+        {/* Quick Actions Card */}
+        <div style={{ width: 300, height: 400, background: 'white', borderRadius: 15, border: '2px #D9D9D9 solid', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 24, boxSizing: 'border-box' }}>
+          <div style={{ color: 'black', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 700, marginBottom: 16 }}>Quick Actions</div>
+          <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
+            <button style={{ width: '100%', height: 54, background: '#F5F5F5', borderRadius: 5, border: '1.5px #D9D9D9 solid', color: 'black', fontSize: 14, fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }}>Add New Employee</button>
+            <button style={{ width: '100%', height: 54, background: '#F5F5F5', borderRadius: 5, border: '1.5px #D9D9D9 solid', color: 'black', fontSize: 14, fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }}>Assign Training</button>
+            <button style={{ width: '100%', height: 54, background: '#F5F5F5', borderRadius: 5, border: '1.5px #D9D9D9 solid', color: 'black', fontSize: 14, fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }}>Generate Report</button>
+            <button style={{ width: '100%', height: 54, background: '#F5F5F5', borderRadius: 5, border: '1.5px #D9D9D9 solid', color: 'black', fontSize: 14, fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }}>Export Data</button>
+          </div>
+        </div>
       </div>
     </div>
   );

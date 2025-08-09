@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 type NavBarProps = {
@@ -6,94 +6,208 @@ type NavBarProps = {
   onSearchChange?: (value: string) => void;
 };
 
-const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => (
-  <div
-    style={{
-      width: '100%',
-      height: 100,
-      left: 0,
-      top: 0,
-      position: 'absolute',
-      background: 'white',
-      outline: '2px #D9D9D9 solid',
-      outlineOffset: '-2px',
-      zIndex: 10,
-    }}
-  >
-    {/* Search Box */}
-    {showSearch && (
+const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
+  const [scrolled, setScrolled] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 30);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+
+  return (
+    <div
+      style={{
+        width: '100%',
+        minWidth: 320,
+        height: scrolled ? 60 : 100,
+        left: 0,
+        top: 0,
+        position: 'fixed',
+        background: 'white',
+        outline: '2px #D9D9D9 solid',
+        outlineOffset: '-2px',
+        zIndex: 100,
+        transition: 'height 0.2s cubic-bezier(.4,0,.2,1)',
+        boxShadow: scrolled ? '0 2px 8px rgba(0,0,0,0.06)' : undefined,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {/* Flex container for all navbar content */}
       <div
         style={{
-          width: 396,
-          height: 39,
-          left: 220,
-          top: 30,
-          position: 'absolute',
-          background: '#D9D9D9',
-          borderRadius: 20,
+          width: '100%',
+          minWidth: 300,
           display: 'flex',
           alignItems: 'center',
-          paddingLeft: 16,
+          justifyContent: 'space-between',
+          height: '100%',
+          padding: '0 18px',
           boxSizing: 'border-box',
         }}
       >
-        <img
-          src="/search.png"
-          alt="Search"
-          style={{ width: 24, height: 24, marginRight: 8, display: 'block' }}
-        />
-        <input
-          type="text"
-          placeholder="Search"
-        onChange={e => onSearchChange?.(e.target.value)}
+        {/* Left: Logo + Search */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: windowWidth < 400 ? 4 : 12, minWidth: 0 }}>
+          <Link href="/">
+            <img
+              src="/logo.png"
+              alt="Logo"
+              style={{
+                width: scrolled ? 70 : 100,
+                height: scrolled ? 25 : 36,
+                cursor: 'pointer',
+                transition: 'width 0.2s, height 0.2s',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
+          </Link>
+          {showSearch && windowWidth >= 560 && (
+            <div
+              style={{
+                width: windowWidth < 800 ? 90 : windowWidth < 950 ? (0.20 * windowWidth) : (0.28 * windowWidth),
+                height: scrolled ? 26 : 34,
+                background: '#D9D9D9',
+                borderRadius: 20,
+                display: 'flex',
+                alignItems: 'center',
+                paddingLeft: 8,
+                boxSizing: 'border-box',
+                transition: 'height 0.2s, width 0.2s',
+                marginLeft: 20,
+              }}
+            >
+              <img
+                src="/search.png"
+                alt="Search"
+                style={{ width: 16, height: 16, marginRight: 4, display: 'block' }}
+              />
+              <input
+                type="text"
+                placeholder="Search"
+                onChange={e => onSearchChange?.(e.target.value)}
+                style={{
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  fontSize: 13,
+                  fontFamily: 'Montserrat',
+                  width: '100%',
+                }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Center/Right: Nav links */}
+        <div
           style={{
-            border: 'none',
-            outline: 'none',
-            background: 'transparent',
-            fontSize: 18,
-            fontFamily: 'Montserrat',
-            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap:
+              windowWidth < 400 ? 2 :
+              windowWidth < 750 ? 6 :
+              windowWidth < 900 ? 14 :
+              windowWidth < 1200 ? 28 : 48,
+            flex: 1,
+            justifyContent: 'flex-end',
+            minWidth: 0,
+            overflow: 'hidden',
           }}
-        />
-      </div>
-    )}
-    {/* Navigation */}
-    <div style={{ width: 731, height: 60, right: 30, top: 20, position: 'absolute' }}>
-      <div style={{ width: 537, height: 33, left: 0, top: 14, position: 'absolute' }}>
-        <div style={{ width: 179, height: 33, left: 0, top: 0, position: 'absolute' }}>
+        >
           <Link href="/" style={{ textDecoration: 'none' }}>
-            <div style={{ width: 179, height: 33, textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: '#717171', fontSize: 22, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '22px', wordWrap: 'break-word', cursor: 'pointer' }}>Dashboard</div>
+            <div style={{
+              color: '#717171',
+              fontSize:
+                windowWidth < 400 ? 10 :
+                windowWidth < 750 ? 12 :
+                scrolled ? 16 : 20,
+              fontFamily: 'Montserrat',
+              fontWeight: 400,
+              lineHeight: 1.2,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              cursor: 'pointer',
+              transition: 'font-size 0.2s',
+              padding: '0 2px',
+            }}>Dashboard</div>
           </Link>
-        </div>
-        <div style={{ width: 179, height: 33, left: 179, top: 0, position: 'absolute' }}>
           <Link href="/employees" style={{ textDecoration: 'none' }}>
-            <div style={{ width: 179, height: 33, textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: '#717171', fontSize: 22, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '22px', wordWrap: 'break-word', cursor: 'pointer' }}>Employees</div>
+            <div style={{
+              color: '#717171',
+              fontSize:
+                windowWidth < 400 ? 10 :
+                windowWidth < 750 ? 12 :
+                scrolled ? 16 : 20,
+              fontFamily: 'Montserrat',
+              fontWeight: 400,
+              lineHeight: 1.2,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              cursor: 'pointer',
+              transition: 'font-size 0.2s',
+              padding: '0 2px',
+            }}>Employees</div>
           </Link>
-        </div>
-        <div style={{ width: 179, height: 33, left: 358, top: 0, position: 'absolute' }}>
           <Link href="/trainings" style={{ textDecoration: 'none' }}>
-            <div style={{ width: 179, height: 33, textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: '#717171', fontSize: 22, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '22px', wordWrap: 'break-word', cursor: 'pointer' }}>Trainings</div>
+            <div style={{
+              color: '#717171',
+              fontSize:
+                windowWidth < 400 ? 10 :
+                windowWidth < 750 ? 12 :
+                scrolled ? 16 : 20,
+              fontFamily: 'Montserrat',
+              fontWeight: 400,
+              lineHeight: 1.2,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              cursor: 'pointer',
+              transition: 'font-size 0.2s',
+              padding: '0 2px',
+            }}>Trainings</div>
           </Link>
+        </div>
+
+        {/* Far right: Icons */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: windowWidth < 400 ? 4 : windowWidth < 750 ? 8 : 18,
+            minWidth: 0,
+            marginLeft: 22,
+          }}
+        >
+          <img
+            src="/bell.png"
+            alt="Notifications"
+            style={{ height: windowWidth < 400 ? 16 : scrolled ? 20 : 26, objectFit: 'contain', display: 'block', transition: 'height 0.2s' }}
+          />
+          <img
+            src="/person.png"
+            alt="Profile"
+            style={{ height: windowWidth < 400 ? 14 : scrolled ? 18 : 24, objectFit: 'contain', display: 'block', transition: 'height 0.2s' }}
+          />
         </div>
       </div>
     </div>
-    {/* Bell Icon */}
-    <div style={{ width: 60, height: 60, right: 110, top: 20, position: 'absolute', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <img src="/bell.png" alt="Notifications" style={{ height: 32, objectFit: 'contain', display: 'block' }} />
-    </div>
-    {/* Person Icon */}
-    <div style={{ width: 40, height: 40, right: 50, top: 30, position: 'absolute', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <img src="/person.png" alt="Profile" style={{ height: 32, objectFit: 'contain', display: 'block' }} />
-    </div>
-    {/* Logo */}
-    <div style={{ width: 100, height: 36, left: 43, top: 32, position: 'absolute' }}>
-      <div style={{ left: 0, top: 0, position: 'absolute', justifyContent: 'flex-start', alignItems: 'flex-start', gap: 8, display: 'inline-flex' }}>
-        <Link href="/">
-          <img style={{ width: 100, height: 36, cursor: 'pointer' }} src="/logo.png" alt="Logo" />
-        </Link>
-      </div>
-    </div>
-  </div>
-);
+  );
+};
 
 export default NavBar;
+

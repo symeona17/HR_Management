@@ -23,6 +23,15 @@ def add_training_need(employee_id, recommended_training_id, recommendation_level
     values = (employee_id, recommended_training_id, recommendation_level)
     execute_query(query, values)
 
+# Function to fetch all trainings
+def get_all_trainings():
+    query = """
+    SELECT id AS training_id, title, description, start_date, end_date, category
+    FROM training
+    """
+    results = fetch_results(query)
+    return results
+
 # Function to fetch all trainings for a specific employee, including training needs and recommendation levels
 def get_employee_training(employee_id):
     query = """
