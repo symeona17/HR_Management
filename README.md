@@ -9,7 +9,7 @@ HR Management Application created for my Thesis Project.
 
 ## Setup
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/hr-management-api.git
-   cd hr-management-api
+How to use:
+ - Download the repository from [here](https://github.com/symeona17/HR_Management)
+ - Run "npm install" on \hr-management-frontend
+ - Run "uvicorn main:app --reload" on parent folder & "npm run dev" on \hr-management-frontend
