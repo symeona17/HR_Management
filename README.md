@@ -13,3 +13,5 @@ How to use:
  - Download the repository from [here](https://github.com/symeona17/HR_Management)
  - Run "npm install" on \hr-management-frontend
  - Run "uvicorn main:app --reload" on parent folder & "npm run dev" on \hr-management-frontend
+
+ Note: .env file with credentials is required.
