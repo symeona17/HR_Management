@@ -113,6 +113,7 @@ const EmployeesPage = () => {
           setEmployees(data.employee);
           setFiltered(data.employee);
         }}
+        departments={departments}
       />
       {/* Employee Cards Grid */}
       <div

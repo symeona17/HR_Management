@@ -8,12 +8,19 @@ const Home: React.FC = () => {
   const [totalEmployees, setTotalEmployees] = useState<number | null>(null);
   const [ongoingTrainings, setOngoingTrainings] = useState<number | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [departments, setDepartments] = useState<string[]>([]);
 
   useEffect(() => {
     const getTotalEmployees = async () => {
       try {
         const data = await fetchEmployees();
         setTotalEmployees(Array.isArray(data.employee) ? data.employee.length : 0);
+        // Collect unique departments
+        if (Array.isArray(data.employee)) {
+          const set = new Set<string>();
+          data.employee.forEach((emp: any) => set.add(emp.department));
+          setDepartments(Array.from(set));
+        }
       } catch (e) {
         setTotalEmployees(null);
       }
@@ -130,16 +137,27 @@ const Home: React.FC = () => {
         onClose={() => setShowAdd(false)}
         onSuccess={async () => {
           setShowAdd(false);
-          // Refresh employee count
+          // Refresh employee count and departments
           try {
             const data = await fetchEmployees();
             setTotalEmployees(Array.isArray(data.employee) ? data.employee.length : 0);
+            if (Array.isArray(data.employee)) {
+              const set = new Set<string>();
+              data.employee.forEach((emp: any) => set.add(emp.department));
+              setDepartments(Array.from(set));
+            }
           } catch {}
         }}
         fetchEmployees={async () => {
           const data = await fetchEmployees();
           setTotalEmployees(Array.isArray(data.employee) ? data.employee.length : 0);
+          if (Array.isArray(data.employee)) {
+            const set = new Set<string>();
+            data.employee.forEach((emp: any) => set.add(emp.department));
+            setDepartments(Array.from(set));
+          }
         }}
+        departments={departments}
       />
     </div>
   );
