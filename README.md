@@ -57,8 +57,3 @@ Download or clone the repository from [here](https://github.com/symeona17/HR_Man
 
 - The frontend will be available at [http://localhost:3000](http://localhost:3000)
 - The backend API will be available at [http://localhost:8000](http://localhost:8000)
-
-### Notes
-- Make sure to select the correct Python interpreter (the one from `.venv`) in VS Code for best results.
-- If you encounter missing package errors, ensure you have activated the virtual environment and installed all dependencies.
-- The `.env` or `Credentials.txt` file is required for database access and should not be committed to version control.
