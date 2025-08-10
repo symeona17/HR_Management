@@ -2,3 +2,6 @@ fastapi
 uvicorn
 mysql-connector-python
 pydantic
+python-jose
+passlib
+sqlalchemy
