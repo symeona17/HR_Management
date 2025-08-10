@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { fetchEmployees } from '../utils/api';
+import { fetchEmployees, searchEmployees } from '../utils/api';
 import NavBar from '../components/NavBar';
 import AddEmployeeOverlay from '../components/AddEmployeeOverlay';
 import EmployeeCardOverlay from '../components/EmployeeCardOverlay';
@@ -45,20 +45,33 @@ const EmployeesPage = () => {
   }, [employees]);
 
   useEffect(() => {
-    let result = employees;
-    if (department !== 'Any') {
-      result = result.filter(emp => emp.department === department);
-    }
-    if (search.trim() !== '') {
-      const s = search.trim().toLowerCase();
-      result = result.filter(emp =>
-        emp.first_name.toLowerCase().includes(s) ||
-        emp.last_name.toLowerCase().includes(s) ||
-        emp.department.toLowerCase().includes(s) ||
-        emp.job_title.toLowerCase().includes(s)
-      );
-    }
-    setFiltered(result);
+    const doSearch = async () => {
+      // If no search and department is Any, just show all
+      if (search.trim() === '' && department === 'Any') {
+        setFiltered(employees);
+        return;
+      }
+      // Build query params for backend search
+      const params: any = {};
+      if (search.trim() !== '') {
+        // Use search as name, surname, email, department, and job_title for backend search
+        params.name = search;
+        params.surname = search;
+        params.email = search;
+        params.department = department !== 'Any' ? department : search;
+        params.job_title = search;
+      }
+      if (department !== 'Any') {
+        params.department = department;
+      }
+      try {
+        const data = await searchEmployees(params);
+        setFiltered((data.employees && data.employees.employee) || []);
+      } catch (err) {
+        setFiltered([]);
+      }
+    };
+    doSearch();
   }, [department, search, employees]);
 
   return (

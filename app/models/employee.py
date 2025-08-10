@@ -94,7 +94,7 @@ def delete_employee(employee_id: int):
 
 
 # Function to search employees by various attributes and return detailed data
-def search_employee(name=None, surname=None, email=None, department=None):
+def search_employee(name=None, surname=None, email=None, department=None, job_title=None):
     # Start building the query with a basic SELECT
     query = """
     SELECT e.id AS employee_id, e.first_name, e.last_name, e.email, e.hire_date, e.department, e.job_title,
@@ -111,19 +111,25 @@ def search_employee(name=None, surname=None, email=None, department=None):
     """
     values = []
     
-    # Add conditions dynamically based on which fields are provided
+    # OR logic: if any field is provided, match any of them
+    or_clauses = []
     if name:
-        query += " AND e.first_name LIKE %s"
+        or_clauses.append("e.first_name LIKE %s")
         values.append(f"%{name}%")
     if surname:
-        query += " AND e.last_name LIKE %s"
+        or_clauses.append("e.last_name LIKE %s")
         values.append(f"%{surname}%")
     if email:
-        query += " AND e.email LIKE %s"
+        or_clauses.append("e.email LIKE %s")
         values.append(f"%{email}%")
     if department:
-        query += " AND e.department LIKE %s"
+        or_clauses.append("e.department LIKE %s")
         values.append(f"%{department}%")
+    if job_title:
+        or_clauses.append("e.job_title LIKE %s")
+        values.append(f"%{job_title}%")
+    if or_clauses:
+        query += " AND (" + " OR ".join(or_clauses) + ")"
     
     query += " GROUP BY e.id;"  # Ensure that we group by employee_id
     

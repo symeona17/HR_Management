@@ -42,11 +42,12 @@ def search_employee_endpoint(
     name: str = Query(None, max_length=100),
     surname: str = Query(None, max_length=100),
     email: str = Query(None, max_length=255),
-    department: str = Query(None, max_length=100)
+    department: str = Query(None, max_length=100),
+    job_title: str = Query(None, max_length=100)
 ):
     try:
         # Search for employees based on query parameters
-        results = search_employee(name, surname, email, department)
+        results = search_employee(name, surname, email, department, job_title)
         if results:
             return {"employees": results}
         else:
