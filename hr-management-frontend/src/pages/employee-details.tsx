@@ -9,6 +9,7 @@ type Employee = {
   employee_id?: number; // for frontend compatibility
   first_name: string;
   last_name: string;
+  email: string;
   department: string;
   job_title: string;
   hire_date: string;
@@ -75,6 +76,7 @@ const EmployeeDetailsPage = () => {
             <>
               <input value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} style={{ fontSize: 24, fontFamily: 'Montserrat', fontWeight: 600, color: '#222', textAlign: 'center', marginBottom: 4, borderRadius: 6, border: '1px solid #ccc', padding: 4, width: 180 }} />
               <input value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} style={{ fontSize: 24, fontFamily: 'Montserrat', fontWeight: 600, color: '#222', textAlign: 'center', marginBottom: 4, borderRadius: 6, border: '1px solid #ccc', padding: 4, width: 180 }} />
+              <input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={{ fontSize: 16, fontFamily: 'Montserrat', color: '#555', textAlign: 'center', marginBottom: 4, borderRadius: 6, border: '1px solid #ccc', padding: 4, width: 180 }} placeholder="Email" />
               <input value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} style={{ fontSize: 16, fontFamily: 'Montserrat', color: '#555', textAlign: 'center', marginBottom: 4, borderRadius: 6, border: '1px solid #ccc', padding: 4, width: 180 }} />
               <input value={form.level || ''} onChange={e => setForm({ ...form, level: e.target.value })} style={{ fontSize: 14, fontFamily: 'Montserrat', color: '#555', textAlign: 'center', marginBottom: 4, borderRadius: 6, border: '1px solid #ccc', padding: 4, width: 180 }} placeholder="Level" />
               <input
@@ -88,6 +90,7 @@ const EmployeeDetailsPage = () => {
           ) : (
             <>
               <div style={{ fontSize: 28, fontFamily: 'Montserrat', fontWeight: 600, color: '#222', textAlign: 'center' }}>{employee.first_name} {employee.last_name}</div>
+              <div style={{ fontSize: 15, fontFamily: 'Montserrat', color: '#555', textAlign: 'center', marginBottom: 2 }}>{employee.email}</div>
               <div style={{ fontSize: 18, fontFamily: 'Montserrat', fontWeight: 400, color: '#555', textAlign: 'center' }}>{employee.department}</div>
               <div style={{ fontSize: 16, fontFamily: 'Montserrat', fontWeight: 400, color: '#555', textAlign: 'center' }}>{employee.level || 'Senior level'}<br />Joined {employee.hire_date}</div>
             </>

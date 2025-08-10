@@ -9,6 +9,7 @@ type Employee = {
   employee_id: number;
   first_name: string;
   last_name: string;
+  email: string;
   department: string;
   job_title: string;
   hire_date: string;
@@ -174,41 +175,45 @@ const EmployeesPage = () => {
               setShowEmployeeOverlay(true);
             }}
           >
-            {/* Profile Image in Gray Circle */}
-            <div
-              style={{
-                width: 70,
-                height: 70,
-                background: '#D9D9D9',
-                borderRadius: '50%',
-                overflow: 'hidden',
-                marginBottom: 8,
-                position: 'relative',
-              }}
-            >
-              <img
-                src="/employee.png"
-                alt="profile"
+            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start' }}>
+              {/* Profile Image */}
+              <div
                 style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  display: 'block',
+                  width: 70,
+                  height: 70,
+                  background: '#D9D9D9',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  marginBottom: 8,
+                  position: 'relative',
                 }}
-              />
+              >
+                <img
+                  src="/employee.png"
+                  alt="profile"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block',
+                  }}
+                />
+              </div>
+              {/* Info */}
+              <div style={{ marginLeft: 16, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+                <div style={{ color: 'black', fontSize: 14, fontFamily: 'Montserrat', fontWeight: 500 }}>
+                  {emp.first_name} {emp.last_name}
+                </div>
+                <div style={{ color: 'black', fontSize: 10, fontFamily: 'Montserrat', fontWeight: 400 }}>
+                  {emp.department}
+                </div>
+                <div style={{ color: 'black', fontSize: 10, fontFamily: 'Montserrat', fontWeight: 400 }}>
+                    {emp.job_title}<br />Joined {emp.hire_date}
+                  </div>
+              </div>
             </div>
-            {/* Info */}
-            <div style={{ marginLeft: 80, marginTop: -70, position: 'relative' }}>
-              <div style={{ color: 'black', fontSize: 14, fontFamily: 'Montserrat', fontWeight: 500 }}>
-                {emp.first_name} {emp.last_name}
-              </div>
-              <div style={{ color: 'black', fontSize: 10, fontFamily: 'Montserrat', fontWeight: 400 }}>
-                {emp.department}
-              </div>
-              <div style={{ color: 'black', fontSize: 10, fontFamily: 'Montserrat', fontWeight: 400 }}>
-                {emp.job_title}<br />Joined {emp.hire_date}
-              </div>
-            </div>
+            {/* Email below image, left-aligned */}
+            <div style={{ color: '#555', fontSize: 12, fontFamily: 'Montserrat', fontWeight: 400, marginLeft: 2 }}>{emp.email}</div>
           </div>
         ))}
       </div>

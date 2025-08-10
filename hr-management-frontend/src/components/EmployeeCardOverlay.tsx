@@ -5,6 +5,7 @@ type Employee = {
 	employee_id: number;
 	first_name: string;
 	last_name: string;
+	email: string;
 	department: string;
 	job_title: string;
 	hire_date: string;
@@ -117,11 +118,14 @@ const EmployeeCardOverlay: React.FC<EmployeeCardOverlayProps> = ({ open, onClose
 					<div style={{left: 160, top: 40, position: 'absolute', color: 'black', fontSize: 22, fontFamily: 'Montserrat', fontWeight: 600, lineHeight: '22px', wordWrap: 'break-word'}}>
 						{employee.first_name} {employee.last_name}
 					</div>
-					<div style={{left: 162, top: 75, position: 'absolute', color: 'black', fontSize: 15, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '15px', wordWrap: 'break-word'}}>
+					<div style={{left: 162, top: 70, position: 'absolute', color: '#555', fontSize: 13, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '15px', wordWrap: 'break-word'}}>
+						{employee.email}
+					</div>
+					<div style={{left: 162, top: 90, position: 'absolute', color: 'black', fontSize: 15, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '15px', wordWrap: 'break-word'}}>
 						{employee.department}
 					</div>
-					<div style={{left: 162, top: 100, position: 'absolute', color: 'black', fontSize: 13, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '18px', wordWrap: 'break-word'}}>
-						{employee.level || 'Senior level'}<br/>Joined {employee.hire_date}
+					<div style={{left: 162, top: 105, position: 'absolute', color: 'black', fontSize: 13, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '18px', wordWrap: 'break-word'}}>
+						{employee.level ? employee.level + <br /> : null}Joined {employee.hire_date}
 					</div>
 							{/* More whitespace above Current Trainings */}
 							<div style={{left: 36, top: 175, position: 'absolute', color: 'black', fontSize: 13, fontFamily: 'Montserrat', fontWeight: 500, lineHeight: '18px', wordWrap: 'break-word'}}>Current Trainings</div>

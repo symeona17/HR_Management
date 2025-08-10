@@ -31,7 +31,7 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
       style={{
         width: '100%',
         minWidth: 320,
-        height: scrolled ? 60 : 100,
+        height: scrolled ? 60 : 80,
         left: 0,
         top: 0,
         position: 'fixed',
@@ -75,10 +75,10 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
               }}
             />
           </Link>
-          {showSearch && windowWidth >= 560 && (
+          {showSearch && windowWidth >= 570 && (
             <div
               style={{
-                width: windowWidth < 800 ? 90 : windowWidth < 950 ? (0.20 * windowWidth) : (0.28 * windowWidth),
+                width: windowWidth < 820 ? 90 : windowWidth < 950 ? (0.20 * windowWidth) : (0.28 * windowWidth),
                 height: scrolled ? 26 : 34,
                 background: '#D9D9D9',
                 borderRadius: 20,
@@ -191,7 +191,7 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
             alignItems: 'center',
             gap: windowWidth < 400 ? 4 : windowWidth < 750 ? 8 : 18,
             minWidth: 0,
-            marginLeft: 22,
+            marginLeft: windowWidth < 400 ? 16 : windowWidth < 750 ? 32 : windowWidth < 1200 ? 56 : 90,
           }}
         >
           <img
