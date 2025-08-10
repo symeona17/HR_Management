@@ -9,6 +9,7 @@ type NavBarProps = {
 const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
   const [scrolled, setScrolled] = useState(false);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -198,11 +199,42 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
             alt="Notifications"
             style={{ height: windowWidth < 400 ? 16 : scrolled ? 20 : 26, objectFit: 'contain', display: 'block', transition: 'height 0.2s' }}
           />
-          <img
-            src="/person.png"
-            alt="Profile"
-            style={{ height: windowWidth < 400 ? 14 : scrolled ? 18 : 24, objectFit: 'contain', display: 'block', transition: 'height 0.2s' }}
-          />
+          <div style={{ position: 'relative' }}>
+            <img
+              src="/person.png"
+              alt="Profile"
+              style={{ height: windowWidth < 400 ? 14 : scrolled ? 18 : 24, objectFit: 'contain', display: 'block', transition: 'height 0.2s', cursor: 'pointer' }}
+              onClick={() => setShowDropdown((v: boolean) => !v)}
+            />
+            {showDropdown && (
+              <div style={{
+                position: 'absolute',
+                right: 0,
+                top: windowWidth < 400 ? 18 : scrolled ? 22 : 28,
+                background: '#fff',
+                border: '1px solid #eee',
+                borderRadius: 8,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                minWidth: 120,
+                zIndex: 1000,
+                padding: '8px 0',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'stretch',
+              }}>
+                <a href="/profile" style={{ padding: '8px 16px', fontFamily: 'Montserrat', fontSize: 15, color: '#333', textDecoration: 'none', cursor: 'pointer', borderBottom: '1px solid #eee' }}>Profile</a>
+                <div
+                  style={{ padding: '8px 16px', fontFamily: 'Montserrat', fontSize: 15, color: '#D92D20', cursor: 'pointer' }}
+                  onClick={() => {
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('user_email');
+                    localStorage.removeItem('user_role');
+                    window.location.href = '/login';
+                  }}
+                >Logout</div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
