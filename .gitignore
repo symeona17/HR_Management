@@ -10,6 +10,7 @@ venv/
 
 # Configuration files with sensitive information
 .env
+Credentials.txt
 
 # IDE files
 .vscode/
