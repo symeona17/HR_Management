@@ -1,4 +1,4 @@
-# app/employees.py
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import mysql.connector
@@ -6,6 +6,19 @@ from app.database import create_connection, fetch_results
 from app.models.training import add_training, add_training_need, get_employee_training
 
 router = APIRouter()
+
+# Route to get a single employee by ID
+@router.get("/{employee_id}")
+def get_employee_by_id(employee_id: int):
+    conn = create_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM employee WHERE id = %s", (employee_id,))
+    employee = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    return employee
 
 # Pydantic model for Employee
 class Employee(BaseModel):
@@ -15,16 +28,17 @@ class Employee(BaseModel):
     hire_date: str
     department: str
     job_title: str
+    details: str = ""
 
 # Function to insert employee into the database
 def insert_employee(employee: Employee):
     conn = create_connection()
     cursor = conn.cursor()
     query = """
-    INSERT INTO employee (first_name, last_name, email, hire_date, department, job_title)
-    VALUES (%s, %s, %s, %s, %s, %s)
+    INSERT INTO employee (first_name, last_name, email, hire_date, department, job_title, details)
+    VALUES (%s, %s, %s, %s, %s, %s, %s)
     """
-    values = (employee.first_name, employee.last_name, employee.email, employee.hire_date, employee.department, employee.job_title)
+    values = (employee.first_name, employee.last_name, employee.email, employee.hire_date, employee.department, employee.job_title, employee.details)
     cursor.execute(query, values)
     conn.commit()
     cursor.close()
@@ -57,10 +71,10 @@ def update_employee(employee_id: int, employee: Employee):
     cursor = conn.cursor()
     query = """
     UPDATE employee
-    SET first_name = %s, last_name = %s, email = %s, hire_date = %s, department = %s, job_title = %s
+    SET first_name = %s, last_name = %s, email = %s, hire_date = %s, department = %s, job_title = %s, details = %s
     WHERE id = %s
     """
-    values = (employee.first_name, employee.last_name, employee.email, employee.hire_date, employee.department, employee.job_title, employee_id)
+    values = (employee.first_name, employee.last_name, employee.email, employee.hire_date, employee.department, employee.job_title, employee.details, employee_id)
     cursor.execute(query, values)
     conn.commit()
     cursor.close()

@@ -1,3 +1,9 @@
+// Function to fetch a single employee by ID
+export async function fetchEmployeeById(id: string | number) {
+    const res = await fetch(`http://localhost:8000/employee/${id}`);
+    if (!res.ok) throw new Error('Failed to fetch employee');
+    return await res.json();
+}
 // Function to fetch all trainings
 export async function fetchTrainings() {
     const res = await fetch('http://localhost:8000/training/');

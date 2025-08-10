@@ -5,3 +5,5 @@ pydantic
 python-jose
 passlib
 sqlalchemy
+python-dotenv
+python-multipart

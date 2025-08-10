@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { fetchEmployees } from '../utils/api';
 import NavBar from '../components/NavBar';
 import AddEmployeeOverlay from '../components/AddEmployeeOverlay';
+import EmployeeCardOverlay from '../components/EmployeeCardOverlay';
 
 
 type Employee = {
@@ -11,6 +12,11 @@ type Employee = {
   department: string;
   job_title: string;
   hire_date: string;
+  details: string;
+  level?: string;
+  trainings?: string[];
+  skills?: { name: string; rating: number }[];
+  bio?: string;
 };
 
 const EmployeesPage = () => {
@@ -20,6 +26,8 @@ const EmployeesPage = () => {
   const [search, setSearch] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [showEmployeeOverlay, setShowEmployeeOverlay] = useState(false);
 
   useEffect(() => {
     const getEmployees = async () => {
@@ -56,6 +64,12 @@ const EmployeesPage = () => {
   return (
     <div style={{ width: '100vw', minHeight: '100vh', minWidth: 320, position: 'relative', background: '#F5F5F5', overflow: 'auto' }}>
       <NavBar showSearch onSearchChange={setSearch} />
+      {/* Employee Details Overlay */}
+      <EmployeeCardOverlay
+        open={showEmployeeOverlay}
+        onClose={() => setShowEmployeeOverlay(false)}
+        employee={selectedEmployee}
+      />
       {/* Sidebar Filters */}
       <div style={{
         width: 241,
@@ -140,6 +154,11 @@ const EmployeesPage = () => {
               position: 'relative',
               boxSizing: 'border-box',
               padding: 16,
+              cursor: 'pointer',
+            }}
+            onClick={() => {
+              setSelectedEmployee(emp);
+              setShowEmployeeOverlay(true);
             }}
           >
             {/* Profile Image in Gray Circle */}
