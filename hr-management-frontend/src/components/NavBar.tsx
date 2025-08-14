@@ -182,6 +182,24 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
               padding: '0 2px',
             }}>Trainings</div>
           </Link>
+          <Link href="/skills" style={{ textDecoration: 'none' }}>
+            <div style={{
+              color: '#717171',
+              fontSize:
+                windowWidth < 400 ? 10 :
+                windowWidth < 750 ? 12 :
+                scrolled ? 16 : 20,
+              fontFamily: 'Montserrat',
+              fontWeight: 400,
+              lineHeight: 1.2,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              cursor: 'pointer',
+              transition: 'font-size 0.2s',
+              padding: '0 2px',
+            }}>Skills</div>
+          </Link>
         </div>
 
         {/* Far right: Icons */}
