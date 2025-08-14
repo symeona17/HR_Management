@@ -164,3 +164,13 @@ const Home: React.FC = () => {
 };
 
 export default Home;
+
+// Redirect to /login immediately on first load
+export async function getServerSideProps(context: any) {
+  return {
+    redirect: {
+      destination: '/login',
+      permanent: false,
+    },
+  };
+}

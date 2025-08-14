@@ -61,7 +61,7 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
       >
         {/* Left: Logo + Search */}
         <div style={{ display: 'flex', alignItems: 'center', gap: windowWidth < 400 ? 4 : 12, minWidth: 0 }}>
-          <Link href="/">
+          <Link href="/dashboard">
             <img
               src="/logo.png"
               alt="Logo"
@@ -128,7 +128,7 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
             overflow: 'hidden',
           }}
         >
-          <Link href="/" style={{ textDecoration: 'none' }}>
+          <Link href="/dashboard" style={{ textDecoration: 'none' }}>
             <div style={{
               color: '#717171',
               fontSize:

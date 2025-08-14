@@ -38,7 +38,7 @@ const LoginPage: React.FC = () => {
         found.password === 'Trainer$2025' ? 'trainer' :
         found.password === 'Employee%2025' ? 'employee' : 'user');
       setSubmitting(false);
-      router.push("/");
+  router.push("/dashboard");
     }, 800);
   };
 
