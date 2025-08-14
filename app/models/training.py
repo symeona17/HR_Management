@@ -1,3 +1,26 @@
+# Assign an employee to a training
+def assign_employee_to_training(employee_id, training_id):
+    query = "INSERT INTO employee_training (employee_id, training_id) VALUES (%s, %s)"
+    values = (employee_id, training_id)
+    execute_query(query, values)
+
+# Remove an employee from a training
+def remove_employee_from_training(employee_id, training_id):
+    query = "DELETE FROM employee_training WHERE employee_id = %s AND training_id = %s"
+    values = (employee_id, training_id)
+    execute_query(query, values)
+
+# Assign a trainer to a training
+def assign_trainer_to_training(trainer_id, training_id):
+    query = "INSERT INTO trainer_training (trainer_id, training_id) VALUES (%s, %s)"
+    values = (trainer_id, training_id)
+    execute_query(query, values)
+
+# Remove a trainer from a training
+def remove_trainer_from_training(trainer_id, training_id):
+    query = "DELETE FROM trainer_training WHERE trainer_id = %s AND training_id = %s"
+    values = (trainer_id, training_id)
+    execute_query(query, values)
 # Function to delete a training by id
 def delete_training(training_id):
     query = "DELETE FROM training WHERE id = %s"
@@ -40,11 +63,10 @@ def get_all_trainings():
 # Function to fetch all trainings for a specific employee, including training needs and recommendation levels
 def get_employee_training(employee_id):
     query = """
-    SELECT t.id AS training_id, t.title, t.description, t.start_date, t.end_date, t.category,
-           tn.recommendation_level
+    SELECT t.id AS training_id, t.title, t.description, t.start_date, t.end_date, t.category
     FROM training t
-    LEFT JOIN training_need tn ON t.id = tn.recommended_training_id
-    WHERE tn.employee_id = %s
+    INNER JOIN employee_training et ON t.id = et.training_id
+    WHERE et.employee_id = %s
     """
     results = fetch_results(query, (employee_id,))
     return results

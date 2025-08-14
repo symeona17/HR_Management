@@ -1,5 +1,7 @@
+
 import React, { useState } from "react";
 import { useRouter } from "next/router";
+import { loginBackend, fetchMe } from '../utils/authApi';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -9,37 +11,27 @@ const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false); // Added for eye toggle
   const router = useRouter();
 
-  const allowedUsers = [
-    { email: 'hradmin@company.com', password: 'HrAdmin!2025' },
-    { email: 'manager@company.com', password: 'Manager#2025' },
-    { email: 'trainer@company.com', password: 'Trainer$2025' },
-    { email: 'employee@company.com', password: 'Employee%2025' },
-  ];
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
-    // Only allow login for the specified users
-    const found = allowedUsers.find(
-      (u) => u.email === email && u.password === password
-    );
-    if (!found) {
+    try {
+      // Real backend login
+      const loginRes = await loginBackend(email, password);
+      localStorage.setItem('access_token', loginRes.access_token);
+      // Fetch user info (id, role, email)
+      const me = await fetchMe(loginRes.access_token);
+      localStorage.setItem('user_email', me.email);
+      localStorage.setItem('user_role', me.role);
+      localStorage.setItem('user_id', String(me.id));
+      setSubmitting(false);
+      router.push("/dashboard");
+    } catch (err: any) {
       setSubmitting(false);
       setError("Login failed. Kindly check your credentials.");
       setTimeout(() => setError(null), 2000);
-      return;
     }
-    setTimeout(() => {
-      localStorage.setItem('access_token', 'dummy-token');
-      localStorage.setItem('user_email', found.email);
-      localStorage.setItem('user_role', found.password === 'HrAdmin!2025' ? 'hradmin' :
-        found.password === 'Manager#2025' ? 'manager' :
-        found.password === 'Trainer$2025' ? 'trainer' :
-        found.password === 'Employee%2025' ? 'employee' : 'user');
-      setSubmitting(false);
-  router.push("/dashboard");
-    }, 800);
   };
 
   return (

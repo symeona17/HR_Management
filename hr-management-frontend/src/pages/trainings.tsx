@@ -3,6 +3,14 @@ import React, { useState, useEffect } from 'react';
 import NavBar from '../components/NavBar';
 import { fetchTrainings, createTraining, updateTraining, deleteTraining, fetchEmployees, requestTraining } from '../utils/api';
 
+// Helper to fetch assigned trainings for employee
+const API_BASE_URL = 'http://localhost:8000';
+async function fetchAssignedTrainings(employeeId: number) {
+  const res = await fetch(`${API_BASE_URL}/employee/${employeeId}/assigned-trainings`);
+  if (!res.ok) throw new Error('Failed to fetch assigned trainings');
+  return res.json();
+}
+
 const TrainingsPage: React.FC = () => {
   const [trainings, setTrainings] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
@@ -14,10 +22,34 @@ const TrainingsPage: React.FC = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [role, setRole] = useState('');
+  const [userId, setUserId] = useState<number | null>(null);
 
   useEffect(() => {
-    setRole(localStorage.getItem('user_role') || '');
+    if (typeof window !== 'undefined') {
+      setRole(localStorage.getItem('user_role') || '');
+      const id = localStorage.getItem('user_id');
+      setUserId(id ? Number(id) : null);
+    }
   }, []);
+
+  // For employees, fetch assigned trainings whenever user_id or role changes
+  useEffect(() => {
+    console.log('Effect: role', role, 'userId', userId);
+    if (role === 'employee' && userId) {
+      console.log('Fetching assigned trainings for userId:', userId);
+      fetchAssignedTrainings(userId)
+        .then(data => {
+          console.log('Fetched assigned trainings:', data.trainings);
+          setTrainings(Array.isArray(data.trainings) ? data.trainings : []);
+        })
+        .catch((e) => {
+          console.error('Error fetching assigned trainings:', e);
+          setTrainings([]);
+        });
+    } else if (role === 'employee') {
+      setTrainings([]);
+    }
+  }, [role, userId]);
 
   const loadTrainings = async () => {
     try {
@@ -38,21 +70,35 @@ const TrainingsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadTrainings();
-    loadEmployees();
-  }, []);
-
-  useEffect(() => {
-    const now = new Date();
-    let result = trainings;
-    if (status === 'Ongoing') {
-      result = trainings.filter(t => t.end_date && new Date(t.end_date) >= now);
-    } else if (status === 'Finished') {
-      result = trainings.filter(t => t.end_date && new Date(t.end_date) < now);
+    if (role === 'employee') {
+      loadEmployees();
+    } else if (role) {
+      loadTrainings();
+      loadEmployees();
     }
-    result = result.slice().sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
-    setFiltered(result);
-  }, [status, trainings]);
+  }, [role]);
+
+  // For employees, update filtered list directly from trainings
+  useEffect(() => {
+    if (role === 'employee') {
+      setFiltered(trainings.slice().sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime()));
+    }
+  }, [trainings, role]);
+
+  // For non-employees, filter by status
+  useEffect(() => {
+    if (role !== 'employee') {
+      const now = new Date();
+      let result = trainings;
+      if (status === 'Ongoing') {
+        result = trainings.filter(t => t.end_date && new Date(t.end_date) >= now);
+      } else if (status === 'Finished') {
+        result = trainings.filter(t => t.end_date && new Date(t.end_date) < now);
+      }
+      result = result.slice().sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
+      setFiltered(result);
+    }
+  }, [status, trainings, role]);
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
@@ -178,41 +224,48 @@ const TrainingsPage: React.FC = () => {
             justifyItems: 'start',
         }}
       >
-        {filtered.map(training => (
-          <div
-            key={training.training_id}
-            style={{
-              width: 250,
-              minHeight: 200,
-              background: 'white',
-              borderRadius: 15,
-              border: '2px #D9D9D9 solid',
-              position: 'relative',
-              boxSizing: 'border-box',
-              padding: 16,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div style={{ color: 'black', fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{training.title}</div>
-              <div style={{ color: '#717171', fontSize: 12, fontWeight: 400, marginBottom: 8 }}>{training.category}</div>
-              <div style={{ color: 'black', fontSize: 12, fontWeight: 400, marginBottom: 8 }}>{training.description}</div>
-            </div>
-            <div style={{ color: '#3FD270', fontSize: 12, fontWeight: 500, marginBottom: 2 }}>
-              {new Date(training.start_date).toLocaleDateString()} - {new Date(training.end_date).toLocaleDateString()}
-            </div>
-            <div style={{ color: (new Date(training.end_date) >= new Date()) ? '#3FD270' : '#D9534F', fontSize: 12, fontWeight: 600 }}>
-              {(new Date(training.end_date) >= new Date()) ? 'Ongoing' : 'Finished'}
-            </div>
-            {(role === 'hradmin' || role === 'trainer') && (
-              <div style={{ marginTop: 8 }}>
-                <button onClick={() => handleEdit(training)} style={{ marginRight: 8 }}>Edit</button>
-              </div>
-            )}
+        {(() => { console.log('Render: trainings', trainings, 'filtered', filtered, 'role', role); return null; })()}
+        {filtered.length === 0 && role === 'employee' ? (
+          <div style={{ gridColumn: '1/-1', color: '#D9534F', fontSize: 18, fontWeight: 600, textAlign: 'center', marginTop: 40 }}>
+            No assigned trainings found for you.
           </div>
-        ))}
+        ) : (
+          filtered.map(training => (
+            <div
+              key={training.training_id}
+              style={{
+                width: 250,
+                minHeight: 200,
+                background: 'white',
+                borderRadius: 15,
+                border: '2px #D9D9D9 solid',
+                position: 'relative',
+                boxSizing: 'border-box',
+                padding: 16,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <div style={{ color: 'black', fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{training.title}</div>
+                <div style={{ color: '#717171', fontSize: 12, fontWeight: 400, marginBottom: 8 }}>{training.category}</div>
+                <div style={{ color: 'black', fontSize: 12, fontWeight: 400, marginBottom: 8 }}>{training.description}</div>
+              </div>
+              <div style={{ color: '#3FD270', fontSize: 12, fontWeight: 500, marginBottom: 2 }}>
+                {new Date(training.start_date).toLocaleDateString()} - {new Date(training.end_date).toLocaleDateString()}
+              </div>
+              <div style={{ color: (new Date(training.end_date) >= new Date()) ? '#3FD270' : '#D9534F', fontSize: 12, fontWeight: 600 }}>
+                {(new Date(training.end_date) >= new Date()) ? 'Ongoing' : 'Finished'}
+              </div>
+              {(role === 'hradmin' || role === 'trainer') && (
+                <div style={{ marginTop: 8 }}>
+                  <button onClick={() => handleEdit(training)} style={{ marginRight: 8 }}>Edit</button>
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
       {/* Manager Request Section */}
       {role === 'manager' && (
