@@ -8,10 +8,12 @@ type NavBarProps = {
 
 const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
   const [scrolled, setScrolled] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const [windowWidth, setWindowWidth] = useState(1200);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
+    setWindowWidth(window.innerWidth);
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -25,6 +27,11 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setRole(localStorage.getItem('user_role'));
+    }
+  }, []);
 
   return (
     <div
@@ -146,23 +153,21 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
               padding: '0 2px',
             }}>Dashboard</div>
           </Link>
-          {typeof window !== 'undefined' && localStorage.getItem('user_role') !== 'employee' && (
+          {role !== 'employee' && (
             <Link href="/employees" style={{ textDecoration: 'none' }}>
               <div style={{
                 color: '#717171',
                 fontSize:
                   windowWidth < 400 ? 10 :
-                  windowWidth < 750 ? 12 :
-                  scrolled ? 16 : 20,
-                fontFamily: 'Montserrat',
+                  windowWidth < 750 ? 13 :
+                  windowWidth < 900 ? 16 :
+                  windowWidth < 1200 ? 18 : 20,
                 fontWeight: 400,
-                lineHeight: 1.2,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                fontFamily: 'Montserrat',
+                letterSpacing: 1,
+                padding: '0 8px',
                 cursor: 'pointer',
                 transition: 'font-size 0.2s',
-                padding: '0 2px',
               }}>Employees</div>
             </Link>
           )}
@@ -184,7 +189,7 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
               padding: '0 2px',
             }}>Trainings</div>
           </Link>
-          {typeof window !== 'undefined' && localStorage.getItem('user_role') !== 'employee' && (
+          {role !== 'employee' && (
             <Link href="/skills" style={{ textDecoration: 'none' }}>
               <div style={{
                 color: '#717171',

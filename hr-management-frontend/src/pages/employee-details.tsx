@@ -1,4 +1,3 @@
-
 import NavBar from '../components/NavBar';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
@@ -16,7 +15,7 @@ type Employee = {
   details: string;
   level?: string;
   trainings?: string[];
-  skills?: { name: string; rating: number }[];
+	skills?: { id: number; name: string; category: string; proficiency_level?: number }[];
   bio?: string;
 };
 
@@ -108,15 +107,23 @@ const EmployeeDetailsPage = () => {
             {/* Trainings */}
             <div style={{ minWidth: 220 }}>
               <div style={{ fontSize: 20, fontFamily: 'Montserrat', fontWeight: 500, color: '#222', marginBottom: 8 }}>Current Trainings</div>
-              <div style={{ fontSize: 15, fontFamily: 'Montserrat', color: '#333', marginBottom: 8 }}>Cybersecurity: 85%</div>
-              <div style={{ fontSize: 15, fontFamily: 'Montserrat', color: '#333', marginBottom: 8 }}>Time Management: 85%</div>
+              {(employee.trainings || []).length === 0
+                ? <div>No ongoing trainings</div>
+                : (employee.trainings || []).map((t, i) => (
+                    <div key={i}>{t}</div>
+                  ))
+              }
             </div>
             {/* Skills */}
             <div style={{ minWidth: 220 }}>
               <div style={{ fontSize: 20, fontFamily: 'Montserrat', fontWeight: 500, color: '#222', marginBottom: 8 }}>Skills</div>
-              <div style={{ fontSize: 15, fontFamily: 'Montserrat', color: '#333', whiteSpace: 'pre-line' }}>
-                {(employee.skills || []).map(skill => `${skill.name}: ${skill.rating}/5`).join('\n')}
-              </div>
+              <ul style={{ fontSize: 15, fontFamily: 'Montserrat', color: '#333', margin: 0 }}>
+                {(employee.skills || []).length === 0 && <li>No skills listed</li>}
+                  {(employee.skills || []).map(skill => (<li key={skill.id}>{skill.name} <span style={{ color: '#888', fontSize: 13 }}>({skill.category})</span>
+                    {typeof skill.proficiency_level !== 'undefined' && (<span style={{ color: '#3FD270', fontSize: 13, marginLeft: 8 }}>Proficiency: {skill.proficiency_level}</span>)}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
           {/* Edit/Save/Cancel/Delete buttons for hradmin */}

@@ -6,6 +6,7 @@ import EmployeeCardOverlay from '../components/EmployeeCardOverlay';
 
 
 type Employee = {
+  id?: number; // for backend compatibility
   employee_id: number;
   first_name: string;
   last_name: string;
@@ -16,7 +17,7 @@ type Employee = {
   details: string;
   level?: string;
   trainings?: string[];
-  skills?: { name: string; rating: number }[];
+  skills?: { id: number; name: string; category: string }[];
   bio?: string;
 };
 
@@ -170,9 +171,22 @@ const EmployeesPage = () => {
               padding: 16,
               cursor: 'pointer',
             }}
-            onClick={() => {
-              setSelectedEmployee(emp);
-              setShowEmployeeOverlay(true);
+            onClick={async () => {
+              // Use either emp.employee_id or emp.id, fallback to emp
+              const empId = emp.employee_id ?? emp.id;
+              if (empId === undefined) {
+                setSelectedEmployee(emp);
+                setShowEmployeeOverlay(true);
+                return;
+              }
+              try {
+                const data = await import('../utils/api').then(m => m.fetchEmployeeById(empId));
+                setSelectedEmployee(data);
+                setShowEmployeeOverlay(true);
+              } catch (e) {
+                setSelectedEmployee(emp);
+                setShowEmployeeOverlay(true);
+              }
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start' }}>

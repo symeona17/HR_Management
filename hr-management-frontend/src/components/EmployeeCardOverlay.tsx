@@ -12,7 +12,7 @@ type Employee = {
 	details: string;
 	level?: string;
 	trainings?: string[];
-	skills?: { name: string; rating: number }[];
+	skills?: { id: number; name: string; category: string; proficiency_level?: number }[];
 	bio?: string;
 };
 
@@ -55,12 +55,9 @@ const EmployeeCardOverlay: React.FC<EmployeeCardOverlayProps> = ({ open, onClose
 		if (!show && !open) return null;
 		if (!employee) return null;
 
-		// Dummy data fallback for demonstration
-		const topSkills = employee.skills || [
-			{ name: 'Presentation', rating: 4 },
-			{ name: 'Project Management', rating: 4 },
-			{ name: 'Teamwork', rating: 3 },
-		];
+	// Debug: log employee object and skills
+	console.log('EmployeeCardOverlay employee:', employee);
+	const topSkills = employee.skills || [];
 		const trainings = employee.trainings || ['Cybersecurity: 85%'];
 			const bio = employee.details || employee.bio || '';
 
@@ -130,13 +127,20 @@ const EmployeeCardOverlay: React.FC<EmployeeCardOverlayProps> = ({ open, onClose
 							{/* More whitespace above Current Trainings */}
 							<div style={{left: 36, top: 175, position: 'absolute', color: 'black', fontSize: 13, fontFamily: 'Montserrat', fontWeight: 500, lineHeight: '18px', wordWrap: 'break-word'}}>Current Trainings</div>
 							<div style={{left: 36, top: 200, position: 'absolute', color: 'black', fontSize: 13, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '18px', wordWrap: 'break-word'}}>
-								{trainings.join(', ')}
+								{(trainings.length === 0)
+    ? 'No ongoing trainings'
+    : trainings.join(', ')
+}
 							</div>
 									{/* Top Skills above details */}
 									<div style={{left: 36, top: 240, position: 'absolute', color: 'black', fontSize: 13, fontFamily: 'Montserrat', fontWeight: 500, lineHeight: '18px', wordWrap: 'break-word'}}>Top Skills</div>
-											<div style={{left: 36, top: 265, position: 'absolute', color: 'black', fontSize: 12, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '18px', wordWrap: 'break-word', whiteSpace: 'pre-line'}}>
-												{topSkills.map(skill => `${skill.name}: ${skill.rating}/5`).join('\n')}
-											</div>
+											<ul style={{left: 36, top: 265, position: 'absolute', color: 'black', fontSize: 12, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '18px', wordWrap: 'break-word', whiteSpace: 'pre-line', listStyle: 'disc', paddingLeft: 18, margin: 0 }}>
+												{topSkills.length === 0 && <li>No skills listed</li>}
+												{topSkills.map(skill => (<li key={skill.id}>{skill.name} <span style={{ color: '#888', fontSize: 11 }}>({skill.category})</span>
+													{typeof skill.proficiency_level !== 'undefined' && (<span style={{ color: '#3FD270', fontSize: 11, marginLeft: 6 }}>Proficiency: {skill.proficiency_level}</span>)}
+												  </li>
+												))}
+											</ul>
 											{/* Add more space between Top Skills and Details */}
 											<div style={{width: 320, height: 110, left: 36, top: 335, position: 'absolute', color: 'black', fontSize: 10, fontFamily: 'Montserrat', fontWeight: 500, lineHeight: '15px', wordWrap: 'break-word', overflow: 'auto'}}>
 												{bio}

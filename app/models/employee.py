@@ -1,9 +1,19 @@
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import mysql.connector
 from app.database import create_connection, fetch_results
 from app.models.training import add_training, add_training_need, get_employee_training
+
+# Moved from employee_skill.py
+def get_employee_skills(employee_id: int):
+    query = '''
+    SELECT s.id, s.name, s.category, es.proficiency_level
+    FROM employee_skill es
+    JOIN skill s ON es.skill_id = s.id
+    WHERE es.employee_id = %s
+    '''
+    return fetch_results(query, (employee_id,))
+
 
 router = APIRouter()
 
@@ -18,6 +28,24 @@ def get_employee_by_id(employee_id: int):
     conn.close()
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
+    # Fetch skills for this employee
+    skills = get_employee_skills(employee_id)
+    employee["skills"] = skills
+    # Fetch trainings for this employee
+    from app.models.training import get_employee_training
+    import datetime
+    trainings = get_employee_training(employee_id)
+    # Only include ongoing trainings (end_date >= today)
+    today = datetime.date.today()
+    ongoing = []
+    for t in trainings:
+        try:
+            end_date = t.get('end_date')
+            if end_date and str(end_date) >= str(today):
+                ongoing.append(f"{t['title']} ({t['category']})")
+        except Exception:
+            continue
+    employee["trainings"] = ongoing
     return employee
 
 # Pydantic model for Employee
