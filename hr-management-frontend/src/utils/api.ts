@@ -14,6 +14,48 @@ export async function fetchTrainings() {
 
 const API_BASE_URL = 'http://localhost:8000'; // Adjust the base URL as needed
 
+// Function to create a new training
+export const createTraining = async (trainingData: Record<string, any>) => {
+    const res = await fetch(`${API_BASE_URL}/training/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(trainingData),
+    });
+    if (!res.ok) throw new Error('Failed to create training');
+    return await res.json();
+};
+
+// Function to update an existing training
+export const updateTraining = async (trainingId: string | number, trainingData: Record<string, any>) => {
+    const res = await fetch(`${API_BASE_URL}/training/${trainingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(trainingData),
+    });
+    if (!res.ok) throw new Error('Failed to update training');
+    return await res.json();
+};
+
+// Function to delete a training
+export const deleteTraining = async (trainingId: string | number) => {
+    const res = await fetch(`${API_BASE_URL}/training/${trainingId}`, {
+        method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to delete training');
+    return await res.json();
+};
+
+// Function for managers to request training for an employee
+export const requestTraining = async (employeeId: string | number, trainingId: string | number, recommendationLevel: number = 3) => {
+    const res = await fetch(`${API_BASE_URL}/training/need`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employee_id: employeeId, recommended_training_id: trainingId, recommendation_level: recommendationLevel }),
+    });
+    if (!res.ok) throw new Error('Failed to request training');
+    return await res.json();
+};
+
 // Function to fetch all skills
 export async function fetchSkills() {
     const res = await fetch(`${API_BASE_URL}/skill/`);

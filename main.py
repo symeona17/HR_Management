@@ -7,7 +7,9 @@ import datetime
 
 from app.models.employee import router as employee_router, search_employee
 from app.models.skill import router as skills_router
-from app.models.training import get_all_trainings
+from app.models.training import get_all_trainings, add_training, delete_training
+
+
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -21,8 +23,18 @@ app.add_middleware(
 )
 
 # Include the routers from employees and skills modules
+
 app.include_router(employee_router, prefix="/employee", tags=["employee"])
 app.include_router(skills_router, prefix="/skill", tags=["skill"])
+
+# Endpoint to delete a training (now correctly placed)
+@app.delete("/training/{training_id}")
+def remove_training(training_id: int):
+    try:
+        delete_training(training_id)
+        return {"message": "Training deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error: {e}")
 
 # Endpoint to get all trainings
 @app.get("/training/")
@@ -32,6 +44,30 @@ def get_trainings():
         return {"trainings": results}
     except Exception as e:
         return {"error": str(e)}
+
+# Endpoint to create a new training
+from pydantic import BaseModel
+
+class TrainingCreate(BaseModel):
+    title: str
+    description: str
+    start_date: str
+    end_date: str
+    category: str
+
+@app.post("/training/")
+def create_training(training: TrainingCreate):
+    try:
+        add_training(
+            training.title,
+            training.description,
+            training.start_date,
+            training.end_date,
+            training.category
+        )
+        return {"message": "Training created successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error: {e}")
 
 @app.get("/")
 def read_root():

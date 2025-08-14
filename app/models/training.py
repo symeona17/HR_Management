@@ -1,3 +1,8 @@
+# Function to delete a training by id
+def delete_training(training_id):
+    query = "DELETE FROM training WHERE id = %s"
+    values = (training_id,)
+    execute_query(query, values)
 # app/models/training.py
 from app.database import execute_query, fetch_results
 
