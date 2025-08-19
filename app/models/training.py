@@ -4,10 +4,39 @@ Training endpoints and utility functions for the HR Management system.
 Handles CRUD operations for trainings, employee-training assignments, and trainer-training assignments.
 """
 
+
 from fastapi import APIRouter, HTTPException, Body, Path
 from pydantic import BaseModel
-
+from typing import List, Dict
 router = APIRouter()
+
+
+# --- TRAINER ENDPOINTS ---
+@router.get("/trainer/{trainer_id}/trainings")
+def get_trainings_for_trainer(trainer_id: int):
+    """Get all trainings assigned to a specific trainer."""
+    query = """
+        SELECT t.* FROM training t
+        INNER JOIN trainer_training tt ON t.id = tt.training_id
+        WHERE tt.trainer_id = %s
+    """
+    results = fetch_results(query, (trainer_id,))
+    return {"trainings": results}
+
+@router.get("/trainer/{trainer_id}/feedback")
+def get_feedback_for_trainer_trainings(trainer_id: int):
+    """Get all feedback for trainings conducted by a specific trainer."""
+    query = """
+        SELECT f.* FROM feedback f
+        INNER JOIN employee_training et ON f.employee_id = et.employee_id
+        INNER JOIN trainer_training tt ON et.training_id = tt.training_id
+        WHERE tt.trainer_id = %s
+    """
+    results = fetch_results(query, (trainer_id,))
+    return {"feedback": results}
+
+
+
 
 
 class AssignmentRequest(BaseModel):

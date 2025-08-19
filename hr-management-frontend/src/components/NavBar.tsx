@@ -153,7 +153,7 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
               padding: '0 2px',
             }}>Dashboard</div>
           </Link>
-          {role !== 'employee' && (
+          {role !== 'employee' && role !== 'trainer' && (
             <Link href="/employees" style={{ textDecoration: 'none' }}>
               <div style={{
                 color: '#717171',
@@ -189,7 +189,7 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
               padding: '0 2px',
             }}>Trainings</div>
           </Link>
-          {role !== 'employee' && (
+          {role === 'hradmin' && (
             <Link href="/skills" style={{ textDecoration: 'none' }}>
               <div style={{
                 color: '#717171',

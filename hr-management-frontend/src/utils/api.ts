@@ -44,7 +44,7 @@ export async function fetchTrainings() {
 }
 
 
-const API_BASE_URL = 'http://localhost:8000'; // Adjust the base URL as needed
+export const API_BASE_URL = 'http://localhost:8000'; // Adjust the base URL as needed
 
 // Function to create a new training
 export const createTraining = async (trainingData: Record<string, any>) => {

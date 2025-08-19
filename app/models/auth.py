@@ -75,7 +75,18 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 @router.get("/me")
 def read_users_me(current_user=Depends(get_current_user)):
-    """Get the current user's information from the JWT token."""
+    """Get the current user's information from the JWT token, returning the employee id if available."""
+    # Try to find the employee record matching the user's email
+    query = "SELECT id, role, email FROM employee WHERE email = %s"
+    employees = fetch_results(query, (current_user['email'],))
+    if employees:
+        emp = employees[0]
+        return {
+            "id": emp['id'],
+            "email": emp['email'],
+            "role": emp['role']
+        }
+    # Fallback to users table info if not found in employee
     return {
         "id": current_user['id'],
         "email": current_user['email'],

@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { fetchEmployees, searchEmployees } from '../utils/api';
+import { fetchManagerTeam } from '../utils/profileApi';
 import NavBar from '../components/NavBar';
 import AddEmployeeOverlay from '../components/AddEmployeeOverlay';
 import EmployeeCardOverlay from '../components/EmployeeCardOverlay';
@@ -30,52 +31,45 @@ const EmployeesPage = () => {
   const [success, setSuccess] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showEmployeeOverlay, setShowEmployeeOverlay] = useState(false);
+  // For manager: always show only their team
+  const [role, setRole] = useState('');
+  const [userId, setUserId] = useState<number | null>(null);
+  const [managerTeam, setManagerTeam] = useState<Employee[]>([]);
 
   useEffect(() => {
-    const getEmployees = async () => {
-      const data = await fetchEmployees();
-      setEmployees(data.employee);
-      setFiltered(data.employee);
-    };
-    getEmployees();
+    if (typeof window !== 'undefined') {
+      const r = localStorage.getItem('user_role') || '';
+      setRole(r);
+      const id = localStorage.getItem('user_id');
+      setUserId(id ? Number(id) : null);
+    }
   }, []);
 
-  const departments = useMemo(() => {
-    const set = new Set<string>();
-    employees.forEach(emp => set.add(emp.department));
-    return Array.from(set);
-  }, [employees]);
-
   useEffect(() => {
-    const doSearch = async () => {
-      // If no search and department is Any, just show all
-      if (search.trim() === '' && department === 'Any') {
-        setFiltered(employees);
-        return;
-      }
-      // Build query params for backend search
-      const params: any = {};
-      if (search.trim() !== '') {
-        // Use search as name, surname, email, department, and job_title for backend search
-        params.name = search;
-        params.surname = search;
-        params.email = search;
-        params.department = department !== 'Any' ? department : search;
-        params.job_title = search;
-      }
-      if (department !== 'Any') {
-        params.department = department;
-      }
-      try {
-        const data = await searchEmployees(params);
-        setFiltered((data.employees && data.employees.employee) || []);
-      } catch (err) {
-        setFiltered([]);
-      }
-    };
-    doSearch();
-  }, [department, search, employees]);
+    if (role === 'manager' && userId) {
+      fetchManagerTeam(userId).then(data => {
+        setManagerTeam(Array.isArray(data.team) ? data.team : []);
+      }).catch(() => setManagerTeam([]));
+    } else {
+      const getEmployees = async () => {
+        const data = await fetchEmployees();
+        setEmployees(data.employee);
+      };
+      getEmployees();
+    }
+  }, [role, userId]);
+  if (role === 'trainer') {
+    return (
+      <div style={{ width: '100vw', minHeight: '100vh', minWidth: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F5' }}>
+        <NavBar />
+        <div style={{ fontSize: 22, color: '#D9534F', fontWeight: 600, fontFamily: 'Montserrat', marginTop: 120 }}>
+          Access Denied: Trainers are not allowed to view this page.
+        </div>
+      </div>
+    );
+  }
 
+  // Main Employees page for manager and hradmin
   return (
     <div style={{ width: '100vw', minHeight: '100vh', minWidth: 320, position: 'relative', background: '#F5F5F5', overflow: 'auto' }}>
       <NavBar showSearch onSearchChange={setSearch} />
@@ -106,32 +100,38 @@ const EmployeesPage = () => {
           onChange={e => setDepartment(e.target.value)}
         >
           <option value="Any">Any</option>
-          {departments.map(dep => (
+          {useMemo(() => {
+            const set = new Set<string>();
+            (role === 'manager' ? managerTeam : employees).forEach(emp => set.add(emp.department));
+            return Array.from(set);
+          }, [employees, managerTeam, role]).map(dep => (
             <option key={dep} value={dep}>{dep}</option>
           ))}
         </select>
-        {/* Add Employee Button */}
-        <button
-          style={{
-            position: 'absolute',
-            left: 31,
-            bottom: 32,
-            width: 181,
-            height: 40,
-            background: '#3FD270',
-            color: 'white',
-            border: 'none',
-            borderRadius: 8,
-            fontSize: 16,
-            fontFamily: 'Montserrat',
-            fontWeight: 600,
-            cursor: 'pointer',
-            zIndex: 30,
-          }}
-          onClick={() => setShowAdd(true)}
-        >
-          Add Employee
-        </button>
+        {/* Add Employee Button only for hradmin */}
+        {role === 'hradmin' && (
+          <button
+            style={{
+              position: 'absolute',
+              left: 31,
+              bottom: 32,
+              width: 181,
+              height: 40,
+              background: '#3FD270',
+              color: 'white',
+              border: 'none',
+              borderRadius: 8,
+              fontSize: 16,
+              fontFamily: 'Montserrat',
+              fontWeight: 600,
+              cursor: 'pointer',
+              zIndex: 30,
+            }}
+            onClick={() => setShowAdd(true)}
+          >
+            Add Employee
+          </button>
+        )}
       </div>
       <AddEmployeeOverlay
         open={showAdd}
@@ -142,7 +142,11 @@ const EmployeesPage = () => {
           setEmployees(data.employee);
           setFiltered(data.employee);
         }}
-        departments={departments}
+        departments={useMemo(() => {
+          const set = new Set<string>();
+          (role === 'manager' ? managerTeam : employees).forEach(emp => set.add(emp.department));
+          return Array.from(set);
+        }, [employees, managerTeam, role])}
       />
       {/* Employee Cards Grid */}
       <div
@@ -157,7 +161,7 @@ const EmployeesPage = () => {
             justifyItems: 'start',
         }}
       >
-        {filtered.map(emp => (
+        {(role === 'manager' ? managerTeam : filtered).map(emp => (
           <div
             key={emp.employee_id}
             style={{
