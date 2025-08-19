@@ -1,3 +1,35 @@
+// Get sentiment for a comment (without saving feedback)
+export async function getSentimentForComment(comment: string) {
+    const res = await fetch(`${API_BASE_URL}/feedback/sentiment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment }),
+    });
+    if (!res.ok) throw new Error('Failed to get sentiment');
+    return await res.json();
+}
+// Feedback API functions
+export async function fetchEmployeeFeedback(employeeId: string | number) {
+    const res = await fetch(`${API_BASE_URL}/feedback/${employeeId}`);
+    if (!res.ok) throw new Error('Failed to fetch employee feedback');
+    return await res.json();
+}
+
+export async function fetchAllFeedback() {
+    const res = await fetch(`${API_BASE_URL}/feedback/`);
+    if (!res.ok) throw new Error('Failed to fetch all feedback');
+    return await res.json();
+}
+
+export async function submitFeedback(feedbackData: Record<string, any>) {
+    const res = await fetch(`${API_BASE_URL}/feedback/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(feedbackData),
+    });
+    if (!res.ok) throw new Error('Failed to submit feedback');
+    return await res.json();
+}
 // Function to fetch a single employee by ID
 export async function fetchEmployeeById(id: string | number) {
     const res = await fetch(`http://localhost:8000/employee/${id}`);

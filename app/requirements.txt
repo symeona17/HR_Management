@@ -1,4 +1,5 @@
 fastapi
+vaderSentiment
 uvicorn
 mysql-connector-python
 pydantic
