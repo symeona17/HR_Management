@@ -1,11 +1,17 @@
+
+"""
+Employee endpoints and models for the HR Management system.
+Handles CRUD operations and search for employees, including skills and training assignments.
+"""
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import mysql.connector
 from app.database import create_connection, fetch_results
 from app.models.training import add_training, add_training_need, get_employee_training
 
-# Moved from employee_skill.py
 def get_employee_skills(employee_id: int):
+    """Fetch all skills for a given employee."""
     query = '''
     SELECT s.id, s.name, s.category, es.proficiency_level
     FROM employee_skill es
@@ -14,12 +20,11 @@ def get_employee_skills(employee_id: int):
     '''
     return fetch_results(query, (employee_id,))
 
-
 router = APIRouter()
 
-# Route to get a single employee by ID
 @router.get("/{employee_id}")
 def get_employee_by_id(employee_id: int):
+    """Get a single employee by ID, including skills and ongoing trainings."""
     conn = create_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM employee WHERE id = %s", (employee_id,))
@@ -31,11 +36,10 @@ def get_employee_by_id(employee_id: int):
     # Fetch skills for this employee
     skills = get_employee_skills(employee_id)
     employee["skills"] = skills
-    # Fetch trainings for this employee
+    # Fetch ongoing trainings for this employee
     from app.models.training import get_employee_training
     import datetime
     trainings = get_employee_training(employee_id)
-    # Only include ongoing trainings (end_date >= today)
     today = datetime.date.today()
     ongoing = []
     for t in trainings:
@@ -48,8 +52,8 @@ def get_employee_by_id(employee_id: int):
     employee["trainings"] = ongoing
     return employee
 
-# Pydantic model for Employee
 class Employee(BaseModel):
+    """Request/response model for employee records."""
     first_name: str
     last_name: str
     email: str
@@ -58,8 +62,9 @@ class Employee(BaseModel):
     job_title: str
     details: str = ""
 
-# Function to insert employee into the database
+
 def insert_employee(employee: Employee):
+    """Insert a new employee into the database."""
     conn = create_connection()
     cursor = conn.cursor()
     query = """
@@ -72,18 +77,20 @@ def insert_employee(employee: Employee):
     cursor.close()
     conn.close()
 
-# Route to create a new employees
+
 @router.post("/")
 def create_employee(employee: Employee):
+    """Create a new employee record."""
     try:
         insert_employee(employee)
         return {"message": "Employee created successfully"}
     except mysql.connector.Error as e:
         raise HTTPException(status_code=400, detail=f"Error: {e}")
 
-# Route to get all employees
+
 @router.get("/")
 def get_employee():
+    """Get all employees."""
     conn = create_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM employee")
@@ -92,9 +99,10 @@ def get_employee():
     conn.close()
     return {"employee": employee}
 
-# Route to update an existing employees
+
 @router.put("/{employee_id}")
 def update_employee(employee_id: int, employee: Employee):
+    """Update an existing employee record by ID."""
     conn = create_connection()
     cursor = conn.cursor()
     query = """
@@ -109,9 +117,10 @@ def update_employee(employee_id: int, employee: Employee):
     conn.close()
     return {"message": "Employee updated successfully"}
 
-# Route to delete an employee
+
 @router.delete("/{employee_id}")
 def delete_employee(employee_id: int):
+    """Delete an employee by ID."""
     conn = create_connection()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM employee WHERE id = %s", (employee_id,))
@@ -121,9 +130,9 @@ def delete_employee(employee_id: int):
     return {"message": "Employee deleted successfully"}
 
 
-# Function to search employees by various attributes and return detailed data
+
 def search_employee(name=None, surname=None, email=None, department=None, job_title=None):
-    # Start building the query with a basic SELECT
+    """Search employees by various attributes and return detailed data, including trainings and feedback."""
     query = """
     SELECT e.id AS employee_id, e.first_name, e.last_name, e.email, e.hire_date, e.department, e.job_title,
            GROUP_CONCAT(DISTINCT CONCAT(t.title, ' (', t.category, ')') ORDER BY t.title) AS training,
@@ -138,7 +147,6 @@ def search_employee(name=None, surname=None, email=None, department=None, job_ti
     WHERE 1=1
     """
     values = []
-    
     # OR logic: if any field is provided, match any of them
     or_clauses = []
     if name:
@@ -158,11 +166,6 @@ def search_employee(name=None, surname=None, email=None, department=None, job_ti
         values.append(f"%{job_title}%")
     if or_clauses:
         query += " AND (" + " OR ".join(or_clauses) + ")"
-    
     query += " GROUP BY e.id;"  # Ensure that we group by employee_id
-    
-    # Fetch results from the database
     results = fetch_results(query, tuple(values))
-    
-    # Return the list of employees directly, not wrapped in another 'employees' object
     return {"employee": results}

@@ -1,3 +1,9 @@
+
+"""
+Search endpoints for the HR Management system.
+Provides employee search functionality by various attributes.
+"""
+
 from fastapi import APIRouter, Query, HTTPException
 from app.models.employee import search_employee
 
@@ -11,6 +17,7 @@ def search_employee_endpoint(
     department: str = Query(None, max_length=100),
     job_title: str = Query(None, max_length=100)
 ):
+    """Search for employees by name, surname, email, department, or job title."""
     try:
         results = search_employee(name, surname, email, department, job_title)
         if results:
