@@ -1,7 +1,7 @@
 import NavBar from '../components/NavBar';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import { fetchEmployeeById, updateEmployee, deleteEmployee, fetchEmployeeFeedback, submitFeedback, getSentimentForComment } from '../utils/api';
+import { fetchEmployeeById, updateEmployee, deleteEmployee, fetchEmployeeFeedback, submitFeedback, getSentimentForComment, fetchRecommendedTrainings } from '../utils/api';
 
 type Employee = {
   id?: number; // for backend compatibility
@@ -35,6 +35,27 @@ const EmployeeDetailsPage = () => {
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [showSentimentModal, setShowSentimentModal] = useState(false);
   const [pendingFeedback, setPendingFeedback] = useState<{ date: string; comments: string; sentiment_score: number | null; sentiment_label: string | null; sentiment_score_1_5?: number | null } | null>(null);
+  // Recommended trainings state
+  const [recommended, setRecommended] = useState<any[]>([]);
+  const [loadingRec, setLoadingRec] = useState(false);
+  // Fetch recommended trainings for admin/manager
+  useEffect(() => {
+    if (!employee) return;
+    if (role === 'hradmin' || role === 'manager') {
+      const empId = employee.id ?? employee.employee_id;
+      if (empId === undefined) {
+        setRecommended([]);
+        return;
+      }
+      setLoadingRec(true);
+      fetchRecommendedTrainings(empId)
+        .then(res => setRecommended(res.recommended_trainings || []))
+        .catch(() => setRecommended([]))
+        .finally(() => setLoadingRec(false));
+    } else {
+      setRecommended([]);
+    }
+  }, [employee, role]);
 
 
   // Fetch feedback for employee
@@ -157,6 +178,20 @@ const EmployeeDetailsPage = () => {
                     <div key={i}>{t}</div>
                   ))
               }
+              {/* Recommended Trainings for admin/manager */}
+              {(role === 'hradmin' || role === 'manager') && (
+                <div style={{ marginTop: 24 }}>
+                  <div style={{ fontSize: 17, fontFamily: 'Montserrat', fontWeight: 500, color: '#222', marginBottom: 6 }}>Recommended Trainings</div>
+                  {loadingRec ? 'Loading...' :
+                    (recommended.length === 0 ? 'No recommendations' : (
+                      <ul style={{margin: 0, paddingLeft: 18}}>
+                        {recommended.map((t: any) => (
+                          <li key={t.id}>{t.title} <span style={{color:'#888', fontSize:13}}>({t.category})</span></li>
+                        ))}
+                      </ul>
+                    ))}
+                </div>
+              )}
             </div>
             {/* Skills */}
             <div style={{ minWidth: 220 }}>

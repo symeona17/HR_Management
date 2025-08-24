@@ -36,6 +36,13 @@ const EmployeesPage = () => {
   const [userId, setUserId] = useState<number | null>(null);
   const [managerTeam, setManagerTeam] = useState<Employee[]>([]);
 
+  // Sync filtered with employees for non-managers (e.g. hradmin)
+  useEffect(() => {
+    if (role !== 'manager') {
+      setFiltered(employees);
+    }
+  }, [employees, role]);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const r = localStorage.getItem('user_role') || '';
@@ -53,6 +60,7 @@ const EmployeesPage = () => {
     } else {
       const getEmployees = async () => {
         const data = await fetchEmployees();
+        console.log('Fetched employees:', data);
         setEmployees(data.employee);
       };
       getEmployees();

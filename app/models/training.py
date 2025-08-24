@@ -4,11 +4,47 @@ Training endpoints and utility functions for the HR Management system.
 Handles CRUD operations for trainings, employee-training assignments, and trainer-training assignments.
 """
 
-
 from fastapi import APIRouter, HTTPException, Body, Path
+from fastapi import Query
 from pydantic import BaseModel
 from typing import List, Dict
+from app.models.skill import get_skills
+from app.database import fetch_results
+
 router = APIRouter()
+
+# --- RECOMMENDATION ENDPOINT ---
+@router.get("/employee/{employee_id}/recommended-trainings")
+def get_recommended_trainings(employee_id: int):
+    """Suggest trainings for an employee based on missing skills and uncompleted trainings."""
+    from app.models.employee import get_employee_skills
+    from app.models.training import get_employee_training
+    # Get all skills in the system
+    all_skills_result = get_skills()
+    all_skills = all_skills_result.get("skill", [])
+    all_skill_ids = {s["id"] for s in all_skills}
+    # Get employee's current skills
+    emp_skills = get_employee_skills(employee_id)
+    emp_skill_ids = {s["id"] for s in emp_skills}
+    # Find missing skills
+    missing_skill_ids = all_skill_ids - emp_skill_ids
+    # Get all trainings
+    query_trainings = "SELECT * FROM training"
+    trainings = fetch_results(query_trainings)
+    # Get employee's assigned trainings
+    assigned_trainings = get_employee_training(employee_id)
+    assigned_training_ids = {t["training_id"] for t in assigned_trainings}
+    # Recommend trainings that cover missing skills and are not already assigned
+    recommended = []
+    for t in trainings:
+        # Find skills this training covers
+        # Assume a mapping table: training_skill(training_id, skill_id)
+        q = "SELECT skill_id FROM training_skill WHERE training_id = %s"
+        covered_skills = fetch_results(q, (t["id"],))
+        covered_skill_ids = {s["skill_id"] for s in covered_skills}
+        if covered_skill_ids & missing_skill_ids and t["id"] not in assigned_training_ids:
+            recommended.append(t)
+    return {"recommended_trainings": recommended}
 
 
 # --- TRAINER ENDPOINTS ---
@@ -35,7 +71,28 @@ def get_feedback_for_trainer_trainings(trainer_id: int):
     results = fetch_results(query, (trainer_id,))
     return {"feedback": results}
 
+@router.get("/trainer/{trainer_id}/trainings")
+def get_trainings_for_trainer(trainer_id: int):
+    """Get all trainings assigned to a specific trainer."""
+    query = """
+        SELECT t.* FROM training t
+        INNER JOIN trainer_training tt ON t.id = tt.training_id
+        WHERE tt.trainer_id = %s
+    """
+    results = fetch_results(query, (trainer_id,))
+    return {"trainings": results}
 
+@router.get("/trainer/{trainer_id}/feedback")
+def get_feedback_for_trainer_trainings(trainer_id: int):
+    """Get all feedback for trainings conducted by a specific trainer."""
+    query = """
+        SELECT f.* FROM feedback f
+        INNER JOIN employee_training et ON f.employee_id = et.employee_id
+        INNER JOIN trainer_training tt ON et.training_id = tt.training_id
+        WHERE tt.trainer_id = %s
+    """
+    results = fetch_results(query, (trainer_id,))
+    return {"feedback": results}
 
 
 

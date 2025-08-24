@@ -1,3 +1,9 @@
+// Function to fetch recommended trainings for an employee
+export async function fetchRecommendedTrainings(employeeId: string | number) {
+    const res = await fetch(`${API_BASE_URL}/employee/${employeeId}/recommended-trainings`);
+    if (!res.ok) throw new Error('Failed to fetch recommended trainings');
+    return await res.json();
+}
 // Get sentiment for a comment (without saving feedback)
 export async function getSentimentForComment(comment: string) {
     const res = await fetch(`${API_BASE_URL}/feedback/sentiment`, {
