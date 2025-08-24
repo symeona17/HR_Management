@@ -23,3 +23,6 @@ Thumbs.db
 # Node 
 .next/
 node_modules/
+
+#Data
+data/

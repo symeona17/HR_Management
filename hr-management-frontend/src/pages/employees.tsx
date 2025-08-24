@@ -1,3 +1,4 @@
+// ...existing code...
 import { useEffect, useState, useMemo } from 'react';
 import { fetchEmployees, searchEmployees } from '../utils/api';
 import { fetchManagerTeam } from '../utils/profileApi';
@@ -18,7 +19,7 @@ type Employee = {
   details: string;
   level?: string;
   trainings?: string[];
-  skills?: { id: number; name: string; category: string }[];
+  skills?: { id: number; preferred_label: string; skill_type: string; proficiency_level?: number }[];
   bio?: string;
 };
 
@@ -35,13 +36,6 @@ const EmployeesPage = () => {
   const [role, setRole] = useState('');
   const [userId, setUserId] = useState<number | null>(null);
   const [managerTeam, setManagerTeam] = useState<Employee[]>([]);
-
-  // Sync filtered with employees for non-managers (e.g. hradmin)
-  useEffect(() => {
-    if (role !== 'manager') {
-      setFiltered(employees);
-    }
-  }, [employees, role]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -61,7 +55,10 @@ const EmployeesPage = () => {
       const getEmployees = async () => {
         const data = await fetchEmployees();
         console.log('Fetched employees:', data);
-        setEmployees(data.employee);
+        // Patch: Ensure each employee has a skills array (default to empty if missing)
+        const employeesWithSkills = (data.employee || []).map((emp: any) => ({ ...emp, skills: emp.skills ?? [] }));
+        setEmployees(employeesWithSkills);
+        setFiltered(employeesWithSkills); // Ensure filtered is set for display
       };
       getEmployees();
     }
@@ -147,8 +144,10 @@ const EmployeesPage = () => {
         onSuccess={() => setShowAdd(false)}
         fetchEmployees={async () => {
           const data = await fetchEmployees();
-          setEmployees(data.employee);
-          setFiltered(data.employee);
+          // Patch: Ensure each employee has a skills array (default to empty if missing)
+          const employeesWithSkills = (data.employee || []).map((emp: any) => ({ ...emp, skills: emp.skills ?? [] }));
+          setEmployees(employeesWithSkills);
+          setFiltered(employeesWithSkills);
         }}
         departments={useMemo(() => {
           const set = new Set<string>();

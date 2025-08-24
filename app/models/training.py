@@ -1,4 +1,3 @@
-
 """
 Training endpoints and utility functions for the HR Management system.
 Handles CRUD operations for trainings, employee-training assignments, and trainer-training assignments.
@@ -13,42 +12,9 @@ from app.database import fetch_results
 
 router = APIRouter()
 
-# --- RECOMMENDATION ENDPOINT ---
-@router.get("/employee/{employee_id}/recommended-trainings")
-def get_recommended_trainings(employee_id: int):
-    """Suggest trainings for an employee based on missing skills and uncompleted trainings."""
-    from app.models.employee import get_employee_skills
-    from app.models.training import get_employee_training
-    # Get all skills in the system
-    all_skills_result = get_skills()
-    all_skills = all_skills_result.get("skill", [])
-    all_skill_ids = {s["id"] for s in all_skills}
-    # Get employee's current skills
-    emp_skills = get_employee_skills(employee_id)
-    emp_skill_ids = {s["id"] for s in emp_skills}
-    # Find missing skills
-    missing_skill_ids = all_skill_ids - emp_skill_ids
-    # Get all trainings
-    query_trainings = "SELECT * FROM training"
-    trainings = fetch_results(query_trainings)
-    # Get employee's assigned trainings
-    assigned_trainings = get_employee_training(employee_id)
-    assigned_training_ids = {t["training_id"] for t in assigned_trainings}
-    # Recommend trainings that cover missing skills and are not already assigned
-    recommended = []
-    for t in trainings:
-        # Find skills this training covers
-        # Assume a mapping table: training_skill(training_id, skill_id)
-        q = "SELECT skill_id FROM training_skill WHERE training_id = %s"
-        covered_skills = fetch_results(q, (t["id"],))
-        covered_skill_ids = {s["skill_id"] for s in covered_skills}
-        if covered_skill_ids & missing_skill_ids and t["id"] not in assigned_training_ids:
-            recommended.append(t)
-    return {"recommended_trainings": recommended}
-
 
 # --- TRAINER ENDPOINTS ---
-@router.get("/trainer/{trainer_id}/trainings")
+@router.get("/trainer/{trainer_id}/trainings", operation_id="get_trainings_for_trainer_main")
 def get_trainings_for_trainer(trainer_id: int):
     """Get all trainings assigned to a specific trainer."""
     query = """
@@ -59,7 +25,7 @@ def get_trainings_for_trainer(trainer_id: int):
     results = fetch_results(query, (trainer_id,))
     return {"trainings": results}
 
-@router.get("/trainer/{trainer_id}/feedback")
+@router.get("/trainer/{trainer_id}/feedback", operation_id="get_feedback_for_trainer_trainings_main")
 def get_feedback_for_trainer_trainings(trainer_id: int):
     """Get all feedback for trainings conducted by a specific trainer."""
     query = """
@@ -71,7 +37,7 @@ def get_feedback_for_trainer_trainings(trainer_id: int):
     results = fetch_results(query, (trainer_id,))
     return {"feedback": results}
 
-@router.get("/trainer/{trainer_id}/trainings")
+@router.get("/trainer/{trainer_id}/trainings", operation_id="get_trainings_for_trainer_alt")
 def get_trainings_for_trainer(trainer_id: int):
     """Get all trainings assigned to a specific trainer."""
     query = """
@@ -82,7 +48,7 @@ def get_trainings_for_trainer(trainer_id: int):
     results = fetch_results(query, (trainer_id,))
     return {"trainings": results}
 
-@router.get("/trainer/{trainer_id}/feedback")
+@router.get("/trainer/{trainer_id}/feedback", operation_id="get_feedback_for_trainer_trainings_alt")
 def get_feedback_for_trainer_trainings(trainer_id: int):
     """Get all feedback for trainings conducted by a specific trainer."""
     query = """

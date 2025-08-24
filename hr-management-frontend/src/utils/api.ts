@@ -1,7 +1,13 @@
-// Function to fetch recommended trainings for an employee
-export async function fetchRecommendedTrainings(employeeId: string | number) {
-    const res = await fetch(`${API_BASE_URL}/employee/${employeeId}/recommended-trainings`);
-    if (!res.ok) throw new Error('Failed to fetch recommended trainings');
+// Search skills by label or alt_labels
+export async function searchSkills(query: string) {
+    const res = await fetch(`${API_BASE_URL}/skill/search?q=${encodeURIComponent(query)}`);
+    if (!res.ok) throw new Error('Failed to search skills');
+    return await res.json();
+}
+// Function to fetch recommended skills to train for an employee (ML endpoint)
+export async function fetchRecommendedSkillsToTrain(employeeId: string | number) {
+    const res = await fetch(`${API_BASE_URL}/employee/${employeeId}/suggested-skills`);
+    if (!res.ok) throw new Error('Failed to fetch recommended skills to train');
     return await res.json();
 }
 // Get sentiment for a comment (without saving feedback)
@@ -95,8 +101,8 @@ export const requestTraining = async (employeeId: string | number, trainingId: s
 };
 
 // Function to fetch all skills
-export async function fetchSkills() {
-    const res = await fetch(`${API_BASE_URL}/skill/`);
+export async function fetchSkills(limit = 50) {
+    const res = await fetch(`${API_BASE_URL}/skill/?limit=${limit}`);
     if (!res.ok) throw new Error('Failed to fetch skills');
     return await res.json();
 }

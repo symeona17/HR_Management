@@ -1,4 +1,3 @@
-
 """
 Employee endpoints and models for the HR Management system.
 Handles CRUD operations and search for employees, including skills and training assignments.
@@ -9,11 +8,13 @@ from pydantic import BaseModel
 import mysql.connector
 from app.database import create_connection, fetch_results
 from app.models.training import add_training, add_training_need, get_employee_training
+from app.ml_recommender import HybridRecommender, get_employees, get_trainings, get_employee_skills, get_training_history, get_training_need
+from typing import List, Optional
 
 def get_employee_skills(employee_id: int):
     """Fetch all skills for a given employee."""
     query = '''
-    SELECT s.id, s.name, s.category, es.proficiency_level
+    SELECT s.id, s.preferred_label, es.proficiency_level
     FROM employee_skill es
     JOIN skill s ON es.skill_id = s.id
     WHERE es.employee_id = %s
@@ -22,7 +23,62 @@ def get_employee_skills(employee_id: int):
 
 router = APIRouter()
 
-@router.get("/{employee_id}")
+# --- ML/AI Calculation Endpoint: Calculate and Insert Skills ---
+@router.post("/ml-calculate-skills/{employee_id}", operation_id="ml_calculate_and_insert_skills")
+def ml_calculate_and_insert_skills(employee_id: int, topn: int = 10):
+    """
+    Run the ML/AI recommender (web/hardcoded/ML logic, no DB filtering),
+    insert any new recommended skills into the DB, and update the score if the skill already exists.
+    Fetches the employee's job title and passes it to the ML recommender.
+    """
+    con = create_connection()
+    from app.database import fetch_results, execute_query
+    # Fetch job title for the employee
+    job_title_result = fetch_results("SELECT job_title FROM employee WHERE id = %s", (employee_id,))
+    if not job_title_result or not job_title_result[0].get('job_title'):
+        raise HTTPException(status_code=404, detail="Employee or job title not found")
+    job_title = job_title_result[0]['job_title']
+    recommender = HybridRecommender()
+    rec_skills = recommender.fetch_trending_skills_from_web(topn=topn, job_title=job_title, con=con)
+    db_skills = fetch_results("SELECT id, preferred_label FROM skill", ())
+    skill_map = { s['preferred_label'].lower(): s for s in db_skills }
+    for s in rec_skills:
+        key = s.get('preferred_label', s.get('name', '')).lower()
+        if key in skill_map:
+            # Update score if exists (assuming a 'score' column exists, otherwise skip this step)
+            try:
+                execute_query("UPDATE skill SET score = %s WHERE id = %s", (s['score'], skill_map[key]['id']))
+            except Exception:
+                pass
+            s['id'] = skill_map[key]['id']
+        else:
+            # Insert new skill
+            new_id = execute_query("INSERT INTO skill (preferred_label, score) VALUES (%s, %s)", (s.get('preferred_label', s.get('name', '')), s['score']))
+            s['id'] = new_id
+            skill_map[key] = {"id": new_id, "preferred_label": s.get('preferred_label', s.get('name', ''))}
+        # Insert or update skill_need (recommendation)
+        try:
+            execute_query(
+                "INSERT INTO skill_need (skill_id, employee_id, recommendation_score) VALUES (%s, %s, %s) "
+                "ON DUPLICATE KEY UPDATE recommendation_score = VALUES(recommendation_score)",
+                (s['id'], employee_id, s['score'])
+            )
+        except Exception as e:
+            print(f"Failed to insert/update skill_need: {e}")
+    return {"recommended_skills": rec_skills}
+
+# --- DB-Only Endpoint: Read Skills from DB ---
+@router.get("/db-skills/{employee_id}", operation_id="db_only_skills")
+def db_only_skills(employee_id: int, topn: int = 10):
+    """
+    Read and return skills from the DB only (no ML/AI logic).
+    """
+    con = create_connection()
+    # Get all skills from DB
+    db_skills = fetch_results("SELECT id, preferred_label FROM skill LIMIT %s", (topn,))
+    return {"db_skills": db_skills}
+
+@router.get("/{employee_id}", operation_id="get_employee_by_id")
 def get_employee_by_id(employee_id: int):
     """Get a single employee by ID, including skills and ongoing trainings."""
     conn = create_connection()
@@ -88,7 +144,7 @@ def create_employee(employee: Employee):
         raise HTTPException(status_code=400, detail=f"Error: {e}")
 
 
-@router.get("/")
+@router.get("/", operation_id="get_all_employees")
 def get_employee():
     """Get all employees."""
     conn = create_connection()
@@ -169,3 +225,59 @@ def search_employee(name=None, surname=None, email=None, department=None, job_ti
     query += " GROUP BY e.id;"  # Ensure that we group by employee_id
     results = fetch_results(query, tuple(values))
     return {"employee": results}
+
+from typing import Union
+class SkillRecommendation(BaseModel):
+    skill_id: Union[int, str]
+    skill_name: str
+    category: Optional[str]
+    score: float
+
+class CategoryRecommendation(BaseModel):
+    category: str
+    score: float
+
+class RecommendedSkillsResponse(BaseModel):
+    recommended_skills: List[SkillRecommendation]
+    recommended_categories: List[CategoryRecommendation]
+
+
+# --- ML Suggested Skills Endpoint and Models ---
+from typing import Union
+
+class SuggestedSkill(BaseModel):
+    skill_id: Union[int, str]
+    skill_name: str
+    category: str
+    score: float
+
+class SuggestedSkillsResponse(BaseModel):
+    suggested_skills: list[SuggestedSkill]
+
+
+
+@router.get("/{employee_id}/suggested-skills", response_model=SuggestedSkillsResponse, operation_id="get_suggested_skills")
+def get_suggested_skills(employee_id: int):
+    from app.ml_recommender import HybridRecommender, get_employees, get_trainings, get_employee_skills, get_training_history, get_training_need
+    con = create_connection()
+    employees = get_employees(con)
+    trainings = get_trainings(con)
+    employee_skills = get_employee_skills(con)
+    training_history = get_training_history(con)
+    training_need = get_training_need(con)
+    recommender = HybridRecommender()
+    recommender.fit(employees, trainings, employee_skills, training_history, training_need)
+    # Get recommended trainings or trending skills from the recommender (in-memory)
+    recommended = recommender.recommend(employee_id, topn=10)
+    # Convert recommender output dicts to SuggestedSkill objects
+    suggested_skills = [
+        SuggestedSkill(
+            skill_id=rec['id'],
+            skill_name=rec.get('preferred_label', rec.get('name', '')),
+            category=rec.get('skill_type', rec.get('category', '')),
+            score=rec.get('score', 0)
+        )
+        for rec in recommended
+    ]
+    return SuggestedSkillsResponse(suggested_skills=suggested_skills)
+

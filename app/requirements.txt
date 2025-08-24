@@ -8,3 +8,9 @@ passlib
 sqlalchemy
 python-dotenv
 python-multipart
+# --- ML dependencies ---
+pandas
+numpy
+scikit-learn
+joblib
+rapidfuzz
