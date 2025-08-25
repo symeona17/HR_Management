@@ -168,3 +168,12 @@ export const searchEmployees = async (queryParams: Record<string, any>) => {
     if (!res.ok) throw new Error('Failed to search employees');
     return await res.json();
 };
+
+// Function to trigger ML calculation of skills for an employee
+export async function calculateMLSkills(employeeId: string | number, topn: number = 10) {
+    const res = await fetch(`${API_BASE_URL}/employee/ml-calculate-skills/${employeeId}?topn=${topn}`, {
+        method: 'POST',
+    });
+    if (!res.ok) throw new Error('Failed to calculate ML skills');
+    return await res.json();
+}

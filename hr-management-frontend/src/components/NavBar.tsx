@@ -159,9 +159,8 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
                 color: '#717171',
                 fontSize:
                   windowWidth < 400 ? 10 :
-                  windowWidth < 750 ? 13 :
-                  windowWidth < 900 ? 16 :
-                  windowWidth < 1200 ? 18 : 20,
+                  windowWidth < 750 ? 12 :
+                  scrolled ? 16 : 20,
                 fontWeight: 400,
                 fontFamily: 'Montserrat',
                 letterSpacing: 1,

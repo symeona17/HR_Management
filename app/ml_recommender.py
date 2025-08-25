@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import pickle
+import os
 from app.database import fetch_results
 
 # --- Data Extraction Helpers (replace with your DB queries) ---
@@ -35,10 +36,37 @@ def get_training_history(con):
 
 
 class HybridRecommender:
-    def fetch_trending_skills_from_web(self, topn=5, job_title=None, con=None):
+    @staticmethod
+    def preprocess_job_title(job_title, department):
         """
-        Returns recommended skills for a given job title using the trained ML model.
-        If the ML model returns no skills, falls back to direct CSV lookup and fuzzy matching (like the test script).
+        Remove generic words from job title and optionally append department for more context.
+        """
+        import re
+        GENERIC_WORDS = [
+            'specialist', 'officer', 'associate', 'assistant', 'manager', 'staff', 'worker',
+            'coordinator', 'representative', 'consultant', 'analyst', 'lead', 'supervisor',
+            'administrator', 'advisor', 'agent', 'executive', 'clerk', 'technician', 'intern',
+            'junior', 'senior', 'head', 'chief', 'director', 'principal', 'expert', 'team', 'member'
+        ]
+        # Lowercase and remove punctuation
+        jt = job_title.lower() if job_title else ''
+        jt = re.sub(r'[^a-z0-9 ]+', '', jt)
+        # Remove generic words
+        tokens = [w for w in jt.split() if w not in GENERIC_WORDS]
+        cleaned = ' '.join(tokens)
+        # Optionally add department for more context
+        #if department:
+            #dept = department.lower().strip()
+            #cleaned = f"{cleaned} {dept}".strip()
+        # Fallback: if cleaned is empty, use original job title
+        if not cleaned:
+            cleaned = job_title.lower() if job_title else ''
+        return cleaned
+    def fetch_trending_skills_from_web(self, topn=5, employee_id=None, con=None):
+        """
+        Returns recommended skills for a given employee using the trained ML model.
+        Loads job_title and department from the employee table using employee_id.
+        If the ML model returns no skills, falls back to direct CSV lookup and fuzzy matching.
         """
         import joblib
         import os
@@ -52,79 +80,102 @@ class HybridRecommender:
         MODEL_PATH = os.path.join(BASE_PATH, 'esco_skill_recommender.pkl')
         VECTORIZER_PATH = os.path.join(BASE_PATH, 'esco_jobtitle_vectorizer.pkl')
         MLB_PATH = os.path.join(BASE_PATH, 'esco_skill_binarizer.pkl')
+        print(f"[DEBUG] Loading MODEL_PATH: {os.path.abspath(MODEL_PATH)}")
+        print(f"[DEBUG] Loading VECTORIZER_PATH: {os.path.abspath(VECTORIZER_PATH)}")
+        print(f"[DEBUG] Loading MLB_PATH: {os.path.abspath(MLB_PATH)}")
         CSV_PATH = os.path.join(BASE_PATH, 'occupation_skill_matrix.csv')
+        import joblib
+        # Always load job_title and department from DB using employee_id
+        job_title = None
+        department = None
+        if employee_id is not None:
+            from app.database import fetch_results
+            emp_rows = fetch_results('SELECT job_title, department FROM employee WHERE id = %s', (employee_id,))
+            print(f"[DEBUG] emp_rows from DB: {emp_rows}")
+            if emp_rows and isinstance(emp_rows, list):
+                first_row = emp_rows[0]
+                print(f"[DEBUG] first_row raw: {first_row} (type: {type(first_row)})")
+                if isinstance(first_row, dict):
+                    job_title = first_row.get('job_title')
+                    department = first_row.get('department')
+                elif isinstance(first_row, (list, tuple)):
+                    job_title = first_row[0] if len(first_row) > 0 else None
+                    department = first_row[1] if len(first_row) > 1 else None
+        jt = self.preprocess_job_title(job_title, department)
+        print(f"[INFO] Preprocessed job title for ML: '{jt}' (original: '{job_title}', department: '{department}')")
         # Load model and encoders
         clf = joblib.load(MODEL_PATH)
         vectorizer = joblib.load(VECTORIZER_PATH)
         mlb = joblib.load(MLB_PATH)
-        # Normalize job title
-        jt = (job_title or '').lower().strip()
-        print(f"[DEBUG] Job title for ML: '{jt}'")
         X_new = vectorizer.transform([jt])
-        print(f"[DEBUG] Vectorized job title shape: {X_new.shape}")
-        y_pred = clf.predict(X_new)
-        print(f"[DEBUG] Raw prediction (y_pred): {y_pred}")
-        skills = mlb.inverse_transform(y_pred)
-        print(f"[DEBUG] Inverse transformed skills: {skills}")
-        skill_labels = list(skills[0]) if skills and len(skills) > 0 else []
-        print(f"[DEBUG] Skill labels predicted: {skill_labels}")
+        # Efficiently select top N skills by probability
+        proba = clf.predict_proba(X_new)
+        topn = int(topn) if topn is not None else 5
+        # Get indices of top N probabilities
+        top_indices = np.argpartition(-proba[0], range(topn))[:topn]
+        # Sort these indices by actual probability descending
+        top_indices = top_indices[np.argsort(-proba[0][top_indices])]
+        skill_labels = [mlb.classes_[i] for i in top_indices]
         # Fallback: direct CSV lookup if ML returns nothing
         if not skill_labels:
-            print("[DEBUG] ML returned no skills, trying CSV fallback...")
             df = pd.read_csv(CSV_PATH)
             df['job_title_norm'] = df['job_title'].str.lower().str.strip()
             direct = df[df['job_title_norm'] == jt]['skill'].tolist()
             if direct:
-                print(f"[Fallback] Direct lookup used for '{job_title}' (norm: '{jt}')")
                 skill_labels = direct[:topn]
             elif process is not None:
                 all_titles = df['job_title'].unique()
-                matches = process.extract(job_title, all_titles, limit=5)
-                print(f"Top 5 closest job titles for '{job_title}':")
-                for m, s, _ in matches:
-                    print(f"  - {m} (score: {s})")
+                matches = process.extract(jt, all_titles, limit=5)
                 match, score, _ = matches[0]
                 HIGH_CONFIDENCE = 90
                 LOW_CONFIDENCE = 80
                 if score >= HIGH_CONFIDENCE:
-                    print(f"[Fuzzy Fallback] Closest match for '{job_title}' is '{match}' (score: {score})")
                     direct = df[df['job_title'] == match]['skill'].tolist()
                     skill_labels = direct[:topn]
                 elif score >= LOW_CONFIDENCE:
-                    print(f"[Warning] Closest match for '{job_title}' is '{match}' (score: {score}), confidence is moderate. Returning skills anyway.")
                     direct = df[df['job_title'] == match]['skill'].tolist()
                     skill_labels = direct[:topn]
                 else:
-                    print(f"[Warning] No close match found for '{job_title}' (best score: {score}). No skills returned.")
                     skill_labels = []
         # Map skill labels to DB skills
         from app.database import fetch_results, execute_query
         db_skills = fetch_results("SELECT id, preferred_label, skill_type FROM skill", ())
         skill_map = { s['preferred_label'].lower(): s for s in db_skills }
         result = []
+    # employee_id is already provided as argument
+        # Map skill labels to their ML probabilities (scaled 0-100)
+        skill_to_proba = {}
+        if 'proba' in locals():
+            for idx, skill in enumerate(mlb.classes_):
+                skill_to_proba[skill] = proba[0][idx]
         for i, label in enumerate(skill_labels[:topn]):
             key = label.lower()
             if key in skill_map:
                 db_skill = skill_map[key]
+                skill_id = db_skill['id']
+                # Get ML probability for this skill, scale to 0-100
+                prob = skill_to_proba.get(label, 0)
+                rec_score = int(round(prob * 100))
                 result.append({
-                    "id": db_skill['id'],
-                    "preferred_label": db_skill['preferred_label'],
-                    "skill_type": db_skill['skill_type'],
-                    "score": 100 - i*5
-                })
-            else:
-                # Optionally insert new skill if not found
-                insert_query = "INSERT INTO skill (preferred_label) VALUES (%s)"
-                new_id = execute_query(insert_query, (label,))
-                result.append({
-                    "id": new_id,
+                    "id": skill_id,
                     "preferred_label": label,
-                    "skill_type": "",
-                    "score": 100 - i*5
+                    "skill_type": skill_map[key]["skill_type"],
+                    "recommendation_score": rec_score
                 })
-                skill_map[key] = {"id": new_id, "preferred_label": label, "skill_type": ""}
-        print(f"[DEBUG] Final recommended skills: {result}")
-        return result
+                # Insert or update skill_need table if employee_id is available
+                if employee_id is not None:
+                    upsert_query = "INSERT INTO skill_need (skill_id, employee_id, recommendation_score) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE recommendation_score = VALUES(recommendation_score)"
+                    try:
+                        execute_query(upsert_query, (skill_id, employee_id, rec_score))
+                    except Exception as e:
+                        print(f"Failed to insert/update skill_need: {e}. Data: skill_id={skill_id}, employee_id={employee_id}, recommendation_score={rec_score}")
+            else:
+                # Do not insert new skills; skip if not found
+                print(f"[DEBUG] Skill '{label}' not found in skill table. Skipping.")
+        # Sort results by recommendation_score descending
+        result_sorted = sorted(result, key=lambda x: x["recommendation_score"], reverse=True)
+        print(f"[INFO] Final recommended skills: {result_sorted}")
+        return result_sorted
     def __init__(self):
         self.training_ids = None
         self.employee_ids = None
@@ -152,16 +203,16 @@ class HybridRecommender:
         self.user_item_matrix = matrix
 
     def recommend(self, employee_id, topn=5, con=None, force_trending=False):
-        # If force_trending is True, always return trending skills
+        # If force_trending is True, always return trending skills for this employee
         if force_trending:
-            return self.fetch_trending_skills_from_web(topn=topn, job_title="Support Specialist", con=con)
-        # If employee not found, return trending skills for Support Specialist in DB format
+            return self.fetch_trending_skills_from_web(topn=topn, employee_id=employee_id)
+        # If employee not found, return trending skills for this employee
         if employee_id not in self.employee_ids:
-            return self.fetch_trending_skills_from_web(topn=topn, job_title="Support Specialist", con=con)
+            return self.fetch_trending_skills_from_web(topn=topn, employee_id=employee_id)
 
-        # If training_need is empty, fallback to trending skills
+        # If training_need is empty, fallback to trending skills for this employee
         if self.training_need is None or len(self.training_need) == 0:
-            return self.fetch_trending_skills_from_web(topn=topn, job_title="Support Specialist", con=con)
+            return self.fetch_trending_skills_from_web(topn=topn, employee_id=employee_id)
 
         # Get all skills from DB
         from app.database import fetch_results
@@ -174,11 +225,11 @@ class HybridRecommender:
         # Score: simple popularity (frequency in training_need) or just topN
         # For now, just return topN missing skills with descending dummy score
         scored_skills = [
-            {"id": s['id'], "preferred_label": s['preferred_label'], "skill_type": s['skill_type'], "score": 100 - i*5}
+            {"id": s['id'], "preferred_label": s['preferred_label'], "skill_type": s['skill_type'], "recommendation_score": 100 - i*5}
             for i, s in enumerate(missing_skills[:topn])
         ]
         if not scored_skills:
-            return self.fetch_trending_skills_from_web(topn=topn, job_title="Support Specialist", con=con)
+            return self.fetch_trending_skills_from_web(topn=topn, employee_id=employee_id)
         return scored_skills
 
 

@@ -33,27 +33,33 @@ def ml_calculate_and_insert_skills(employee_id: int, topn: int = 10):
     """
     con = create_connection()
     from app.database import fetch_results, execute_query
-    # Fetch job title for the employee
-    job_title_result = fetch_results("SELECT job_title FROM employee WHERE id = %s", (employee_id,))
-    if not job_title_result or not job_title_result[0].get('job_title'):
+    # Fetch job title and department for the employee
+    emp_result = fetch_results("SELECT job_title, department FROM employee WHERE id = %s", (employee_id,))
+    if not emp_result or not emp_result[0].get('job_title'):
         raise HTTPException(status_code=404, detail="Employee or job title not found")
-    job_title = job_title_result[0]['job_title']
+    job_title = emp_result[0]['job_title']
+    department = emp_result[0].get('department', '')
+    # Debug: print input features
+    print(f"[DEBUG] ML input features: job_title='{job_title}', department='{department}' for employee_id={employee_id}")
     recommender = HybridRecommender()
-    rec_skills = recommender.fetch_trending_skills_from_web(topn=topn, job_title=job_title, con=con)
+    rec_skills = recommender.fetch_trending_skills_from_web(topn=topn, employee_id=employee_id)
+    # Filter out skills the employee already has
+    existing_skills = set(s['preferred_label'].lower() for s in get_employee_skills(employee_id))
+    filtered_skills = [s for s in rec_skills if s.get('preferred_label', s.get('name', '')).lower() not in existing_skills]
     db_skills = fetch_results("SELECT id, preferred_label FROM skill", ())
     skill_map = { s['preferred_label'].lower(): s for s in db_skills }
-    for s in rec_skills:
+    for s in filtered_skills:
         key = s.get('preferred_label', s.get('name', '')).lower()
         if key in skill_map:
-            # Update score if exists (assuming a 'score' column exists, otherwise skip this step)
+            # Update preferred_label if needed (no score column in schema)
             try:
-                execute_query("UPDATE skill SET score = %s WHERE id = %s", (s['score'], skill_map[key]['id']))
+                execute_query("UPDATE skill SET preferred_label = %s WHERE id = %s", (s.get('preferred_label', s.get('name', '')), skill_map[key]['id']))
             except Exception:
                 pass
             s['id'] = skill_map[key]['id']
         else:
-            # Insert new skill
-            new_id = execute_query("INSERT INTO skill (preferred_label, score) VALUES (%s, %s)", (s.get('preferred_label', s.get('name', '')), s['score']))
+            # Insert new skill (no score column in schema)
+            new_id = execute_query("INSERT INTO skill (preferred_label) VALUES (%s)", (s.get('preferred_label', s.get('name', '')),))
             s['id'] = new_id
             skill_map[key] = {"id": new_id, "preferred_label": s.get('preferred_label', s.get('name', ''))}
         # Insert or update skill_need (recommendation)
@@ -61,11 +67,14 @@ def ml_calculate_and_insert_skills(employee_id: int, topn: int = 10):
             execute_query(
                 "INSERT INTO skill_need (skill_id, employee_id, recommendation_score) VALUES (%s, %s, %s) "
                 "ON DUPLICATE KEY UPDATE recommendation_score = VALUES(recommendation_score)",
-                (s['id'], employee_id, s['score'])
+                (s['id'], employee_id, s.get('recommendation_score'))
             )
         except Exception as e:
             print(f"Failed to insert/update skill_need: {e}")
-    return {"recommended_skills": rec_skills}
+    # Placeholder: collect user feedback on recommendations (future work)
+    # e.g., store feedback in a table, or log for analysis
+    print(f"[DEBUG] Final recommended skills (after filtering): {filtered_skills}")
+    return {"recommended_skills": filtered_skills}
 
 # --- DB-Only Endpoint: Read Skills from DB ---
 @router.get("/db-skills/{employee_id}", operation_id="db_only_skills")
@@ -256,28 +265,32 @@ class SuggestedSkillsResponse(BaseModel):
 
 
 
+
 @router.get("/{employee_id}/suggested-skills", response_model=SuggestedSkillsResponse, operation_id="get_suggested_skills")
 def get_suggested_skills(employee_id: int):
-    from app.ml_recommender import HybridRecommender, get_employees, get_trainings, get_employee_skills, get_training_history, get_training_need
+    """
+    Return the current recommended skills for the employee from the skill_need table (DB-driven, not ML-generated).
+    """
     con = create_connection()
-    employees = get_employees(con)
-    trainings = get_trainings(con)
-    employee_skills = get_employee_skills(con)
-    training_history = get_training_history(con)
-    training_need = get_training_need(con)
-    recommender = HybridRecommender()
-    recommender.fit(employees, trainings, employee_skills, training_history, training_need)
-    # Get recommended trainings or trending skills from the recommender (in-memory)
-    recommended = recommender.recommend(employee_id, topn=10)
-    # Convert recommender output dicts to SuggestedSkill objects
+    cursor = con.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT s.id as skill_id, s.preferred_label as skill_name, s.skill_type, sn.recommendation_score as score
+        FROM skill_need sn
+        JOIN skill s ON sn.skill_id = s.id
+        WHERE sn.employee_id = %s
+        ORDER BY sn.recommendation_score DESC
+    """, (employee_id,))
+    skills = cursor.fetchall()
+    cursor.close()
+    con.close()
     suggested_skills = [
         SuggestedSkill(
-            skill_id=rec['id'],
-            skill_name=rec.get('preferred_label', rec.get('name', '')),
-            category=rec.get('skill_type', rec.get('category', '')),
+            skill_id=rec['skill_id'],
+            skill_name=rec['skill_name'],
+            category=rec.get('skill_type', ''),
             score=rec.get('score', 0)
         )
-        for rec in recommended
+        for rec in skills
     ]
     return SuggestedSkillsResponse(suggested_skills=suggested_skills)
 

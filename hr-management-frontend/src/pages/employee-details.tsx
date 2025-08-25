@@ -1,7 +1,7 @@
 import NavBar from '../components/NavBar';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import { fetchEmployeeById, updateEmployee, deleteEmployee, fetchEmployeeFeedback, submitFeedback, getSentimentForComment, fetchRecommendedSkillsToTrain } from '../utils/api';
+import { fetchEmployeeById, updateEmployee, deleteEmployee, fetchEmployeeFeedback, submitFeedback, getSentimentForComment, fetchRecommendedSkillsToTrain, calculateMLSkills } from '../utils/api';
 
 type Employee = {
   id?: number; // for backend compatibility
@@ -28,6 +28,7 @@ const EmployeeDetailsPage = () => {
   const [form, setForm] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState('');
+  const [calculating, setCalculating] = useState(false);
   // Feedback state
   const [feedbackList, setFeedbackList] = useState<any[]>([]);
   const [feedbackForm, setFeedbackForm] = useState({ feedback_date: '', comments: '' });
@@ -52,7 +53,7 @@ const EmployeeDetailsPage = () => {
       setLoadingRec(true);
       fetchRecommendedSkillsToTrain(empId)
         .then(res => {
-          setRecommendedSkills(res.recommended_skills || []);
+          setRecommendedSkills(res.suggested_skills || res.recommended_skills || []);
           setRecommendedCategories(res.recommended_categories || []);
         })
         .catch(() => {
@@ -190,7 +191,36 @@ const EmployeeDetailsPage = () => {
               {/* Recommended Skills to Train for admin/manager */}
               {(role === 'hradmin' || role === 'manager') && (
                 <div style={{ marginTop: 24 }}>
-                  <div style={{ fontSize: 17, fontFamily: 'Montserrat', fontWeight: 500, color: '#222', marginBottom: 6 }}>Recommended Skills to Train</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ fontSize: 17, fontFamily: 'Montserrat', fontWeight: 500, color: '#222', marginBottom: 6 }}>Recommended Skills to Train</div>
+                    <button
+                      onClick={async () => {
+                        if (!employee) return;
+                        setCalculating(true);
+                        try {
+                          const empId = employee.id ?? employee.employee_id;
+                          if (empId === undefined) return;
+                          await calculateMLSkills(empId);
+                          // Refetch recommended skills after calculation
+                          setLoadingRec(true);
+                          const res = await fetchRecommendedSkillsToTrain(empId);
+                          setRecommendedSkills(res.suggested_skills || res.recommended_skills || []);
+                          setRecommendedCategories(res.recommended_categories || []);
+                        } catch (err) {
+                          // Optionally show error
+                        } finally {
+                          setCalculating(false);
+                          setLoadingRec(false);
+                        }
+                      }}
+                      disabled={calculating}
+                      style={{ marginLeft: 8, padding: '4px 14px', borderRadius: 6, border: '1px solid #1976d2', background: calculating ? '#e3eaf7' : 'white', color: '#1976d2', fontWeight: 500, fontSize: 15, cursor: calculating ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                    >
+                      {calculating ? (
+                        <span className="spinner" style={{ width: 16, height: 16, border: '2px solid #1976d2', borderTop: '2px solid transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin 1s linear infinite' }} />
+                      ) : 'Calculate'}
+                    </button>
+                  </div>
                   {loadingRec ? 'Loading...' :
                     (recommendedSkills.length === 0 ? 'No recommendations' : (
                       <ul style={{margin: 0}}>
