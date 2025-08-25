@@ -51,14 +51,15 @@ def retrain_recommender_on_feedback(employee_id: int, topn: int = 10):
     # For each job_title_norm, collect skills from ESCO and upvoted feedback
     job_to_skills = df.groupby('job_title_norm')['skill'].apply(set).to_dict()
     # Add upvoted skills from feedback
+    print(f"[DEBUG] ML feedback training started for employee_id={employee_id}")
     for jt, group in feedback_df.groupby('job_title_norm'):
         up_skills = set(group[group['vote'] == 'up']['skill'])
         down_skills = set(group[group['vote'] == 'down']['skill'])
         if jt not in job_to_skills:
             job_to_skills[jt] = set()
-    job_to_skills[jt].update(up_skills)
+        job_to_skills[jt].update(up_skills)
         # Optionally, remove downvoted skills
-    job_to_skills[jt] -= down_skills
+        job_to_skills[jt] -= down_skills
 
     # --- 4. Prepare training data ---
     job_titles = list(job_to_skills.keys())
