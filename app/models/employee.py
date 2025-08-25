@@ -34,13 +34,19 @@ router = APIRouter()
 # --- Split: DB update and ML retraining ---
 def update_skill_feedback_db(employee_id: int, skill_id: int, vote: str):
     """
-    Update the recommendation_score for a skill suggestion in the DB.
+    Update the recommendation_score for a skill suggestion in the DB and log the vote in skill_feedback.
     """
     if vote not in ('up', 'down'):
         return {"error": "Invalid vote. Use 'up' or 'down'."}
     con = create_connection()
     cursor = con.cursor()
     score_change = 5 if vote == 'up' else -5
+    # Log the vote in skill_feedback table
+    cursor.execute(
+        "INSERT INTO skill_feedback (employee_id, skill_id, vote) VALUES (%s, %s, %s)",
+        (employee_id, skill_id, vote)
+    )
+    # Update the score in skill_need table
     cursor.execute(
         "UPDATE skill_need SET recommendation_score = GREATEST(0, LEAST(100, recommendation_score + %s)) WHERE employee_id = %s AND skill_id = %s",
         (score_change, employee_id, skill_id)
