@@ -1,7 +1,8 @@
+
 import NavBar from '../components/NavBar';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import { fetchEmployeeById, updateEmployee, deleteEmployee, fetchEmployeeFeedback, submitFeedback, getSentimentForComment, fetchRecommendedSkillsToTrain, calculateMLSkills } from '../utils/api';
+import { fetchEmployeeById, updateEmployee, deleteEmployee, fetchEmployeeFeedback, submitFeedback, getSentimentForComment, fetchRecommendedSkillsToTrain, calculateMLSkills, sendSkillFeedback } from '../utils/api';
 
 type Employee = {
   id?: number; // for backend compatibility
@@ -66,6 +67,29 @@ const EmployeeDetailsPage = () => {
       setRecommendedCategories([]);
     }
   }, [employee, role]);
+
+
+  // Real handler for skill feedback (like/dislike)
+  const handleSkillFeedback = async (skillId: number, liked: boolean) => {
+    if (!employee) return;
+    const empId = employee.id ?? employee.employee_id;
+    if (empId === undefined) return;
+  const action = liked ? 'indicate this skill as relevant' : 'indicate this skill as not relevant';
+  const confirmMsg = `Are you sure you want to ${action}?`;
+    if (!window.confirm(confirmMsg)) return;
+    try {
+      await sendSkillFeedback(empId, skillId, liked ? 'up' : 'down');
+      // Refetch recommended skills after feedback
+      setLoadingRec(true);
+      const res = await fetchRecommendedSkillsToTrain(empId);
+      setRecommendedSkills(res.suggested_skills || res.recommended_skills || []);
+      setRecommendedCategories(res.recommended_categories || []);
+    } catch (err) {
+      alert('Failed to send feedback.');
+    } finally {
+      setLoadingRec(false);
+    }
+  };
 
 
   // Fetch feedback for employee
@@ -178,7 +202,7 @@ const EmployeeDetailsPage = () => {
           ) : (
             <div style={{ fontSize: 16, fontFamily: 'Montserrat', color: '#333', lineHeight: '1.7', textAlign: 'justify', marginBottom: 16 }}>{employee.details}</div>
           )}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 40 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
             {/* Trainings */}
             <div style={{ minWidth: 220 }}>
               <div style={{ fontSize: 20, fontFamily: 'Montserrat', fontWeight: 500, color: '#222', marginBottom: 8 }}>Current Trainings</div>
@@ -224,11 +248,17 @@ const EmployeeDetailsPage = () => {
                   {loadingRec ? 'Loading...' :
                     (recommendedSkills.length === 0 ? 'No recommendations' : (
                       <ul style={{margin: 0}}>
-                        {recommendedSkills.map((t: any) => (
-                          <li key={t.skill_id}>
+                        {recommendedSkills.slice(0, 10).map((t: any) => (
+                          <li key={t.skill_id} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                             {t.skill_name}
                             <span style={{color:'#888', fontSize:13}}> ({t.category})</span>
-                            <span style={{color:'#1976d2', fontSize:13, marginLeft:8}}>Score: {t.score}</span>
+                            <span style={{color:'#1976d2', fontSize:13, marginLeft:8}}>Score: {Math.round(t.score)}%</span>
+                            <button title="Like" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1976d2', fontSize: 18, padding: 1 }} onClick={() => handleSkillFeedback(t.skill_id, true)}>
+                              👍
+                            </button>
+                            <button title="Dislike" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d32f2f', fontSize: 18, padding: 1 }} onClick={() => handleSkillFeedback(t.skill_id, false)}>
+                              👎
+                            </button>
                           </li>
                         ))}
                       </ul>

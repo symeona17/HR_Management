@@ -80,9 +80,9 @@ class HybridRecommender:
         MODEL_PATH = os.path.join(BASE_PATH, 'esco_skill_recommender.pkl')
         VECTORIZER_PATH = os.path.join(BASE_PATH, 'esco_jobtitle_vectorizer.pkl')
         MLB_PATH = os.path.join(BASE_PATH, 'esco_skill_binarizer.pkl')
-        print(f"[DEBUG] Loading MODEL_PATH: {os.path.abspath(MODEL_PATH)}")
-        print(f"[DEBUG] Loading VECTORIZER_PATH: {os.path.abspath(VECTORIZER_PATH)}")
-        print(f"[DEBUG] Loading MLB_PATH: {os.path.abspath(MLB_PATH)}")
+    # print(f"[DEBUG] Loading MODEL_PATH: {os.path.abspath(MODEL_PATH)}")
+    # print(f"[DEBUG] Loading VECTORIZER_PATH: {os.path.abspath(VECTORIZER_PATH)}")
+    # print(f"[DEBUG] Loading MLB_PATH: {os.path.abspath(MLB_PATH)}")
         CSV_PATH = os.path.join(BASE_PATH, 'occupation_skill_matrix.csv')
         import joblib
         # Always load job_title and department from DB using employee_id
@@ -91,10 +91,10 @@ class HybridRecommender:
         if employee_id is not None:
             from app.database import fetch_results
             emp_rows = fetch_results('SELECT job_title, department FROM employee WHERE id = %s', (employee_id,))
-            print(f"[DEBUG] emp_rows from DB: {emp_rows}")
+            # print(f"[DEBUG] emp_rows from DB: {emp_rows}")
             if emp_rows and isinstance(emp_rows, list):
                 first_row = emp_rows[0]
-                print(f"[DEBUG] first_row raw: {first_row} (type: {type(first_row)})")
+                # print(f"[DEBUG] first_row raw: {first_row} (type: {type(first_row)})")
                 if isinstance(first_row, dict):
                     job_title = first_row.get('job_title')
                     department = first_row.get('department')
@@ -102,7 +102,7 @@ class HybridRecommender:
                     job_title = first_row[0] if len(first_row) > 0 else None
                     department = first_row[1] if len(first_row) > 1 else None
         jt = self.preprocess_job_title(job_title, department)
-        print(f"[INFO] Preprocessed job title for ML: '{jt}' (original: '{job_title}', department: '{department}')")
+    # print(f"[INFO] Preprocessed job title for ML: '{jt}' (original: '{job_title}', department: '{department}')")
         # Load model and encoders
         clf = joblib.load(MODEL_PATH)
         vectorizer = joblib.load(VECTORIZER_PATH)
@@ -142,7 +142,7 @@ class HybridRecommender:
         db_skills = fetch_results("SELECT id, preferred_label, skill_type FROM skill", ())
         skill_map = { s['preferred_label'].lower(): s for s in db_skills }
         result = []
-    # employee_id is already provided as argument
+        # employee_id is already provided as argument
         # Map skill labels to their ML probabilities (scaled 0-100)
         skill_to_proba = {}
         if 'proba' in locals():
@@ -163,25 +163,26 @@ class HybridRecommender:
                     "recommendation_score": rec_score
                 })
                 # Insert or update skill_need table if employee_id is available
-                if employee_id is not None:
-                    upsert_query = "INSERT INTO skill_need (skill_id, employee_id, recommendation_score) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE recommendation_score = VALUES(recommendation_score)"
-                    try:
-                        execute_query(upsert_query, (skill_id, employee_id, rec_score))
-                    except Exception as e:
-                        print(f"Failed to insert/update skill_need: {e}. Data: skill_id={skill_id}, employee_id={employee_id}, recommendation_score={rec_score}")
-            else:
+                #if employee_id is not None:
+                #    upsert_query = "INSERT INTO skill_need (skill_id, employee_id, recommendation_score) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE recommendation_score = VALUES(recommendation_score)"
+                #    try:
+                #        execute_query(upsert_query, (skill_id, employee_id, rec_score))
+                #    except Exception as e:
+                        # print(f"Failed to insert/update skill_need: {e}. Data: skill_id={skill_id}, employee_id={employee_id}, recommendation_score={rec_score}")
+            #else:
                 # Do not insert new skills; skip if not found
-                print(f"[DEBUG] Skill '{label}' not found in skill table. Skipping.")
+                # print(f"[DEBUG] Skill '{label}' not found in skill table. Skipping.")
         # Sort results by recommendation_score descending
         result_sorted = sorted(result, key=lambda x: x["recommendation_score"], reverse=True)
-        print(f"[INFO] Final recommended skills: {result_sorted}")
+        # print(f"[INFO] Final recommended skills: {result_sorted}")
+        print("[SUCCESS] ML recommendation procedure completed successfully.")
         return result_sorted
     def __init__(self):
         self.training_ids = None
         self.employee_ids = None
         self.employee_skills = None
         self.trainings = None
-        self.user_item_matrix = None
+                        # print(f"[DEBUG] emp_rows from DB: {emp_rows}")
         self.training_need = None
 
     def fit(self, employees, trainings, employee_skills, training_history, training_need):

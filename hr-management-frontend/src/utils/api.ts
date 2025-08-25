@@ -1,3 +1,13 @@
+// Function to send feedback for a recommended skill
+export async function sendSkillFeedback(employeeId: string | number, skillId: string | number, vote: 'up' | 'down') {
+    const res = await fetch(`${API_BASE_URL}/employee/${employeeId}/skill-feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ skill_id: skillId, vote }),
+    });
+    if (!res.ok) throw new Error('Failed to send skill feedback');
+    return await res.json();
+}
 // Search skills by label or alt_labels
 export async function searchSkills(query: string) {
     const res = await fetch(`${API_BASE_URL}/skill/search?q=${encodeURIComponent(query)}`);
