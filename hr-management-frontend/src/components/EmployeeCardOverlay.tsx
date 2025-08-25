@@ -62,6 +62,14 @@ const EmployeeCardOverlay: React.FC<EmployeeCardOverlayProps> = ({ open, onClose
 	  .sort((a, b) => (b.proficiency_level ?? 0) - (a.proficiency_level ?? 0))
 	  .slice(0, 3);
 		const trainings = employee.trainings || ['Cybersecurity: 85%'];
+		let trainingsDisplay = '';
+		if (trainings.length === 0) {
+			trainingsDisplay = 'No ongoing trainings';
+		} else if (trainings.length <= 2) {
+			trainingsDisplay = trainings.join(', ');
+		} else {
+			trainingsDisplay = trainings.slice(0, 2).join(', ') + ' and more.';
+		}
 			const bio = employee.details || employee.bio || '';
 
 		return (
@@ -129,11 +137,8 @@ const EmployeeCardOverlay: React.FC<EmployeeCardOverlayProps> = ({ open, onClose
 					</div>
 							{/* More whitespace above Current Trainings */}
 							<div style={{left: 36, top: 175, position: 'absolute', color: 'black', fontSize: 13, fontFamily: 'Montserrat', fontWeight: 500, lineHeight: '18px', wordWrap: 'break-word'}}>Current Trainings</div>
-							<div style={{left: 36, top: 200, position: 'absolute', color: 'black', fontSize: 13, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '18px', wordWrap: 'break-word'}}>
-								{(trainings.length === 0)
-    ? 'No ongoing trainings'
-    : trainings.join(', ')
-}
+													<div style={{left: 36, top: 200, position: 'absolute', color: 'black', fontSize: 13, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '18px', wordWrap: 'break-word'}}>
+														{trainingsDisplay}
 							</div>
 									{/* Top Skills above details */}
 									<div style={{left: 36, top: 240, position: 'absolute', color: 'black', fontSize: 13, fontFamily: 'Montserrat', fontWeight: 500, lineHeight: '18px', wordWrap: 'break-word'}}>Top Skills</div>
