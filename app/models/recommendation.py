@@ -40,7 +40,7 @@ def get_recommendations(employee_id: int, topn: int = 5):
     recommender.fit(employees, trainings, employee_skills, training_history, training_need)
     recommended = recommender.recommend(employee_id, topn=topn)
     # Map scores to training info
-    id_to_score = {r['id']: r['score'] for r in recommended}
+    id_to_score = {r['id']: r.get('recommendation_score', r.get('score', 0.0)) for r in recommended}
     recommended_trainings = trainings[trainings['id'].isin(id_to_score.keys())].copy()
     recommended_trainings['recommendation_score'] = recommended_trainings['id'].map(id_to_score)
     # Sort by score descending
@@ -54,5 +54,9 @@ def get_recommendations(employee_id: int, topn: int = 5):
         for field in ['description', 'start_date', 'end_date']:
             if field not in d:
                 d[field] = None
+        # Convert date fields to string if they are date objects
+        for date_field in ['start_date', 'end_date']:
+            if d[date_field] is not None and hasattr(d[date_field], 'isoformat'):
+                d[date_field] = d[date_field].isoformat()
         result.append(TrainingRecommendation(**d))
     return RecommendationResponse(recommended_trainings=result)

@@ -23,6 +23,7 @@ Thumbs.db
 # Node 
 .next/
 node_modules/
+hr-management-frontend/next.config.js
 
 #Data
 data/

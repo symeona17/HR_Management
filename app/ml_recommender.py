@@ -16,8 +16,8 @@ def get_employees(con):
     return pd.DataFrame(rows, columns=['id', 'first_name', 'last_name', 'department', 'job_title'])
 
 def get_trainings(con):
-    rows = fetch_results('SELECT id, title, category FROM training', ())
-    return pd.DataFrame(rows, columns=['id', 'title', 'category'])
+    rows = fetch_results('SELECT id, title, description, start_date, end_date, category FROM training', ())
+    return pd.DataFrame(rows, columns=['id', 'title', 'description', 'start_date', 'end_date', 'category'])
 
 def get_employee_skills(con):
     rows = fetch_results('SELECT employee_id, skill_id FROM employee_skill', ())
