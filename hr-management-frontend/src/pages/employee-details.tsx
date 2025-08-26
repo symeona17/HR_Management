@@ -216,7 +216,7 @@ const EmployeeDetailsPage = () => {
               {(role === 'hradmin' || role === 'manager') && (
                 <div style={{ marginTop: 24 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ fontSize: 17, fontFamily: 'Montserrat', fontWeight: 500, color: '#222', marginBottom: 6 }}>Recommended Skills to Train</div>
+                    <div style={{ fontSize: 17, fontFamily: 'Montserrat', fontWeight: 500, color: '#222', marginBottom: 6 }}>Skill Gap & Recommendations</div>
                     <button
                       onClick={async () => {
                         if (!employee) return;
@@ -246,7 +246,7 @@ const EmployeeDetailsPage = () => {
                     </button>
                   </div>
                   {loadingRec ? 'Loading...' :
-                    (recommendedSkills.length === 0 ? 'No recommendations' : (
+                    (recommendedSkills.length === 0 ? 'No skill gaps or upskilling recommendations' : (
                       <ul style={{margin: 0}}>
                         {recommendedSkills.slice(0, 10).map((t: any) => (
                           <li key={t.skill_id} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
