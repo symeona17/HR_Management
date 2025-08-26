@@ -1,14 +1,72 @@
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import NavBar from '../components/NavBar';
 import AddEmployeeOverlay from '../components/AddEmployeeOverlay';
-import { fetchEmployees, fetchTrainings } from '../utils/api';
+import { fetchEmployees, fetchTrainings, fetchAllFeedback } from '../utils/api';
 
 
 const Home: React.FC = () => {
   const [totalEmployees, setTotalEmployees] = useState<number | null>(null);
   const [ongoingTrainings, setOngoingTrainings] = useState<number | null>(null);
+  const [ongoingTrainingsList, setOngoingTrainingsList] = useState<any[]>([]);
+  const [completedTrainingsList, setCompletedTrainingsList] = useState<any[]>([]);
+  // Placeholder for training requests
+  const [trainingRequestsList] = useState<any[]>([]);
+  const router = useRouter();
   const [showAdd, setShowAdd] = useState(false);
   const [departments, setDepartments] = useState<string[]>([]);
+  const [role, setRole] = useState('');
+  const [feedback, setFeedback] = useState<any[]>([]);
+  const [avgSentiment, setAvgSentiment] = useState<number | null>(null);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setRole(localStorage.getItem('user_role') || '');
+    }
+  }, []);
+
+  // Fetch feedback for admin dashboard
+  useEffect(() => {
+    if (role === 'hradmin') {
+      // Fetch both feedback and employees, then join info
+      Promise.all([fetchAllFeedback(), fetchEmployees()])
+        .then(([feedbackData, employeesData]) => {
+          let feedbackArr = Array.isArray(feedbackData) ? feedbackData : [];
+          let empArr = Array.isArray(employeesData.employee) ? employeesData.employee : [];
+          // Build a map of employee_id to { full_name, department }
+          const empMap: Record<string, { full_name: string; department: string }> = {};
+          empArr.forEach((emp: any) => {
+            const id = emp.employee_id || emp.id;
+            if (id) {
+              empMap[id] = {
+                full_name: emp.full_name || (emp.first_name ? (emp.first_name + (emp.last_name ? ' ' + emp.last_name : '')) : ''),
+                department: emp.department || emp.dept || '-'
+              };
+            }
+          });
+          // Attach name and department to each feedback
+          feedbackArr = feedbackArr.map((fb: any) => {
+            const id = fb.employee_id || fb.id;
+            const empInfo = empMap[id] || {};
+            return {
+              ...fb,
+              full_name: empInfo.full_name || fb.full_name || fb.employee_name || '-',
+              department: empInfo.department || fb.department || '-',
+            };
+          });
+          setFeedback(feedbackArr);
+          if (feedbackArr.length > 0) {
+            const avg = feedbackArr.reduce((sum, f) => sum + (typeof f.sentiment_score === 'number' ? f.sentiment_score : 0), 0) / feedbackArr.length;
+            setAvgSentiment(avg);
+          } else {
+            setAvgSentiment(null);
+          }
+        })
+        .catch(() => {
+          setFeedback([]);
+          setAvgSentiment(null);
+        });
+    }
+  }, [role]);
 
   useEffect(() => {
     const getTotalEmployees = async () => {
@@ -29,19 +87,26 @@ const Home: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const getOngoingTrainings = async () => {
+    const getTrainings = async () => {
       try {
         const data = await fetchTrainings();
         const now = new Date();
-        const ongoing = Array.isArray(data.trainings)
-          ? data.trainings.filter((t: any) => t.end_date && new Date(t.end_date) >= now).length
-          : 0;
-        setOngoingTrainings(ongoing);
+        let ongoingList: any[] = [];
+        let completedList: any[] = [];
+        if (Array.isArray(data.trainings)) {
+          ongoingList = data.trainings.filter((t: any) => t.end_date && new Date(t.end_date) >= now);
+          completedList = data.trainings.filter((t: any) => t.end_date && new Date(t.end_date) < now);
+        }
+        setOngoingTrainings(ongoingList.length);
+        setOngoingTrainingsList(ongoingList);
+        setCompletedTrainingsList(completedList);
       } catch (e) {
         setOngoingTrainings(null);
+        setOngoingTrainingsList([]);
+        setCompletedTrainingsList([]);
       }
     };
-    getOngoingTrainings();
+    getTrainings();
   }, []);
 
   return (
@@ -57,22 +122,23 @@ const Home: React.FC = () => {
       }}
     >
       <NavBar />
-      {/* Cards Grid */}
+      {/* Cards Flex Layout */}
       <div
         style={{
           marginTop: 100,
           padding: '32px',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: 32,
-          justifyItems: 'center',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '32px',
+          alignItems: 'flex-start',
+          justifyContent: 'flex-start',
         }}
       >
         {/* Overview Card */}
         <div style={{ width: 300, height: 400, background: 'white', borderRadius: 15, border: '2px #D9D9D9 solid', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 24, boxSizing: 'border-box' }}>
           <div style={{ color: 'black', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 700, marginBottom: 24 }}>Overview</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', rowGap: 16, columnGap: 8, width: '100%' }}>
-      <div style={{ color: 'black', fontSize: 18, fontWeight: 700, textAlign: 'right' }}>{totalEmployees !== null ? totalEmployees : '...'}</div>
+            <div style={{ color: 'black', fontSize: 18, fontWeight: 700, textAlign: 'right' }}>{totalEmployees !== null ? totalEmployees : '...'}</div>
             <div style={{ color: 'black', fontSize: 14, fontWeight: 400, alignSelf: 'center' }}>Total Employees</div>
             <div style={{ color: 'black', fontSize: 18, fontWeight: 700, textAlign: 'right' }}>{ongoingTrainings !== null ? ongoingTrainings : '...'}</div>
             <div style={{ color: 'black', fontSize: 14, fontWeight: 400, alignSelf: 'center' }}>Ongoing Trainings</div>
@@ -81,42 +147,8 @@ const Home: React.FC = () => {
             <div style={{ color: 'black', fontSize: 18, fontWeight: 700, textAlign: 'right' }}>8.9<span style={{ color: 'black', fontSize: 14, fontWeight: 400 }}>/10</span></div>
             <div style={{ color: 'black', fontSize: 14, fontWeight: 400, alignSelf: 'center' }}>Satisfaction Score</div>
           </div>
-          <div style={{ marginTop: 'auto', alignSelf: 'center', width: 42, height: 42, borderRadius: 5, outline: '3px #3FD270 solid', outlineOffset: '-1.50px', marginBottom: 8 }} />
-          <div style={{ alignSelf: 'center', width: 6, height: 12, transform: 'rotate(-135deg)', outline: '3px #3FD270 solid', outlineOffset: '-1.50px' }} />
         </div>
-        {/* Training Insights Card */}
-        <div style={{ width: 300, height: 400, background: 'white', borderRadius: 15, border: '2px #D9D9D9 solid', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 24, boxSizing: 'border-box' }}>
-          <div style={{ color: 'black', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 700, marginBottom: 16 }}>Training Insights</div>
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div>
-              <div style={{ color: 'black', fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Top Performing Courses</div>
-              <div style={{ color: 'black', fontSize: 14, fontWeight: 400, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span>Cybersecurity</span>
-                <span>Time Management</span>
-                <span>Presentation</span>
-              </div>
-            </div>
-            <div>
-              <div style={{ color: 'black', fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Recommended Trainings</div>
-              <div style={{ color: 'black', fontSize: 14, fontWeight: 400, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span>Cybersecurity</span>
-                <span>Time Management</span>
-                <span>Presentation</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        {/* Upcoming Deadlines Card */}
-        <div style={{ width: 300, height: 400, background: 'white', borderRadius: 15, border: '2px #D9D9D9 solid', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 24, boxSizing: 'border-box' }}>
-          <div style={{ color: 'black', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 700, marginBottom: 16 }}>Upcoming Deadlines</div>
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ color: 'black', fontSize: 16, fontWeight: 700 }}>09/04 <span style={{ fontWeight: 400 }}>Presentation</span></div>
-            <div style={{ color: 'black', fontSize: 16, fontWeight: 700 }}>12/04 <span style={{ fontWeight: 400 }}>Task 1</span></div>
-            <div style={{ color: 'black', fontSize: 16, fontWeight: 700 }}>12/04 <span style={{ fontWeight: 400 }}>Task 1</span></div>
-            <div style={{ color: 'black', fontSize: 16, fontWeight: 700 }}>12/04 <span style={{ fontWeight: 400 }}>Task 1</span></div>
-          </div>
-        </div>
-        {/* Quick Actions Card */}
+        {/* Quick Actions Card (moved up) */}
         <div style={{ width: 300, height: 400, background: 'white', borderRadius: 15, border: '2px #D9D9D9 solid', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 24, boxSizing: 'border-box' }}>
           <div style={{ color: 'black', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 700, marginBottom: 16 }}>Quick Actions</div>
           <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
@@ -131,6 +163,116 @@ const Home: React.FC = () => {
             <button style={{ width: '100%', height: 54, background: '#F5F5F5', borderRadius: 5, border: '1.5px #D9D9D9 solid', color: 'black', fontSize: 14, fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }}>Export Data</button>
           </div>
         </div>
+        {/* Training Insights Card */}
+        <div
+          style={{ width: 300, height: 400, background: 'white', borderRadius: 15, border: '2px #D9D9D9 solid', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 24, boxSizing: 'border-box', cursor: 'pointer' }}
+          onClick={() => router.push('/trainings')}
+        >
+          <div style={{ color: 'black', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 700, marginBottom: 16 }}>Training Insights</div>
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div>
+              <div style={{ color: 'black', fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Ongoing Trainings</div>
+              <div style={{ color: 'black', fontSize: 14, fontWeight: 400, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {ongoingTrainingsList.length === 0 && <span>No ongoing trainings</span>}
+                {ongoingTrainingsList.slice(0, 2).map((t, idx) => (
+                  <span key={idx}>{t.title || t.name || t.training_name || 'Untitled Training'}</span>
+                ))}
+                {ongoingTrainingsList.length > 3 && (
+                  <span style={{ color: '#1976d2', fontWeight: 500, marginTop: 4 }}>Show More...</span>
+                )}
+              </div>
+            </div>
+            <div>
+              <div style={{ color: 'black', fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Training Requests</div>
+              <div style={{ color: 'black', fontSize: 14, fontWeight: 400, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {trainingRequestsList.length === 0 && <span>No requests</span>}
+                {trainingRequestsList.slice(0, 2).map((t, idx) => (
+                  <span key={idx}>{t.title || t.name || t.training_name || 'Untitled Training'}</span>
+                ))}
+                {trainingRequestsList.length > 3 && (
+                  <span style={{ color: '#1976d2', fontWeight: 500, marginTop: 4 }}>Show More...</span>
+                )}
+              </div>
+            </div>
+            <div>
+              <div style={{ color: 'black', fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Completed Trainings</div>
+              <div style={{ color: 'black', fontSize: 14, fontWeight: 400, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {completedTrainingsList.length === 0 && <span>No completed trainings</span>}
+                {completedTrainingsList.slice(0, 2).map((t, idx) => (
+                  <span key={idx}>{t.title || t.name || t.training_name || 'Untitled Training'}</span>
+                ))}
+                {completedTrainingsList.length > 3 && (
+                  <span style={{ color: '#1976d2', fontWeight: 500, marginTop: 4 }}>Show More...</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Feedback & Sentiment Analytics Card (Admin only) */}
+        {role === 'hradmin' && (
+          <div style={{ width: 560, minHeight: 400, height: 400, background: 'white', borderRadius: 15, border: '2px #D9D9D9 solid', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 24, paddingBottom: 40, boxSizing: 'border-box' }}>
+            <div style={{ color: 'black', fontSize: 20, fontFamily: 'Montserrat', fontWeight: 700, marginBottom: 16 }}>Feedback & Sentiment</div>
+            <div style={{ color: '#1976d2', fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
+              Latest feedback submitted:
+            </div>
+            <div style={{ width: '100%', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', marginBottom: 8, overflow: 'hidden' }}>
+              <table style={{ width: '100%', height: '100%', fontSize: 13, borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                <thead>
+                  <tr style={{ background: '#f5f5f5' }}>
+                    <th style={{ padding: 6, borderBottom: '1px solid #eee', width: '32%' }}>Full Name</th>
+                    <th style={{ padding: 6, borderBottom: '1px solid #eee', width: '22%' }}>Department</th>
+                    <th style={{ padding: 6, borderBottom: '1px solid #eee', width: '26%' }}>Date</th>
+                    <th style={{ padding: 6, borderBottom: '1px solid #eee', width: '20%' }}>Sentiment</th>
+                  </tr>
+                </thead>
+                <tbody style={{ height: '100%' }}>
+                  {feedback.length === 0 && (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', padding: 16, color: '#888' }}>No feedback data</td>
+                    </tr>
+                  )}
+                  {feedback.slice(0, 5).map((f, i) => {
+                    // Try to get the employee's name and department from the feedback object
+                    let name = '-';
+                    if (f.full_name) name = f.full_name;
+                    else if (f.employee_name) name = f.employee_name;
+                    else if (f.first_name || f.last_name) name = `${f.first_name || ''} ${f.last_name || ''}`.trim();
+                    let dept = '-';
+                    if (f.department) dept = f.department;
+                    else if (f.dept) dept = f.dept;
+                    // Get employee id for navigation
+                    const empId = f.employee_id || f.id;
+                    return (
+                      <tr
+                        key={i}
+                        style={{ height: '36px', cursor: empId ? 'pointer' : 'default' }}
+                        onClick={() => {
+                          if (empId) router.push(`/employee-details?id=${empId}`);
+                        }}
+                        tabIndex={empId ? 0 : -1}
+                        title={empId ? 'View employee details' : ''}
+                      >
+                        <td style={{ padding: 6, textAlign: 'center', verticalAlign: 'middle' }}>{name}</td>
+                        <td style={{ padding: 6, textAlign: 'center', verticalAlign: 'middle' }}>{dept}</td>
+                        <td style={{ padding: 6, textAlign: 'center', verticalAlign: 'middle' }}>{f.feedback_date}</td>
+                        <td style={{ padding: 6, textAlign: 'center', verticalAlign: 'middle' }}>{typeof f.sentiment_score === 'number' ? f.sentiment_score.toFixed(2) : 'N/A'}</td>
+                      </tr>
+                    );
+                  })}
+                  {Array.from({ length: Math.max(0, 5 - feedback.length) }).map((_, idx) => (
+                    <tr key={feedback.length + idx} style={{ height: '36px' }}>
+                      <td style={{ padding: 6 }}>&nbsp;</td>
+                      <td style={{ padding: 6 }}>&nbsp;</td>
+                      <td style={{ padding: 6 }}>&nbsp;</td>
+                      <td style={{ padding: 6 }}>&nbsp;</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <button style={{ marginTop: 8, background: '#F5F5F5', border: '1.5px #D9D9D9 solid', borderRadius: 5, padding: '8px 16px', fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }} onClick={() => alert('Feature coming soon!')}>View Full Feedback Analytics</button>
+          </div>
+        )}
       </div>
       <AddEmployeeOverlay
         open={showAdd}

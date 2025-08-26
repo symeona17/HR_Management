@@ -73,37 +73,31 @@ const EmployeesPage = () => {
       </div>
     );
   }
-
-  // Main Employees page for manager and hradmin
   return (
     <div style={{ width: '100vw', minHeight: '100vh', minWidth: 320, position: 'relative', background: '#F5F5F5', overflow: 'auto' }}>
-      <NavBar showSearch onSearchChange={setSearch} />
-      {/* Employee Details Overlay */}
-      <EmployeeCardOverlay
-        open={showEmployeeOverlay}
-        onClose={() => setShowEmployeeOverlay(false)}
-        employee={selectedEmployee}
-      />
+      <NavBar />
       {/* Sidebar Filters */}
       <div style={{
         width: 241,
-        height: 'calc(100vh - 60px)',
+        height: '100vh',
         position: 'fixed',
         top: 60,
         left: 0,
-        overflow: 'hidden',
+        overflowY: 'auto',
         zIndex: 20,
         background: 'white',
-        // border: '1px #D9D9D9 solid',
         boxShadow: '2px 0 8px #eee',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        padding: '24px 16px 16px 16px',
       }}>
-        {/* <div style={{ width: 241, height: '100%', left: 0, top: 0, position: 'absolute', background: 'white', border: '1px #D9D9D9 solid' }} /> */}
-        <div style={{ width: 78, height: 32, left: 96, top: 63, position: 'absolute', textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: '#717171', fontSize: 22, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '22px' }}>Filters</div>
-        <div style={{ position: 'absolute', left: 31, top: 115, color: '#717171', fontSize: 18, fontFamily: 'Montserrat', fontWeight: 400, lineHeight: '18px' }}>
+        <div style={{ width: '100%', height: 32, textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: '#717171', fontSize: 22, fontWeight: 400, lineHeight: '22px', marginBottom: 16 }}>Filters</div>
+        <div style={{ color: '#717171', fontSize: 18, fontWeight: 400, lineHeight: '18px', marginBottom: 8 }}>
           Department
         </div>
         <select
-          style={{ position: 'absolute', left: 31, top: 139, width: 181, height: 35, borderRadius: 10, border: '1px #D5D5D5 solid', background: '#F5F5F5', fontSize: 18, fontFamily: 'Montserrat', paddingLeft: 12 }}
+          style={{ width: '100%', height: 35, borderRadius: 10, border: '1px #D5D5D5 solid', background: '#F5F5F5', fontSize: 18, paddingLeft: 12, marginBottom: 24 }}
           value={department}
           onChange={e => setDepartment(e.target.value)}
         >
@@ -116,29 +110,27 @@ const EmployeesPage = () => {
             <option key={dep} value={dep}>{dep}</option>
           ))}
         </select>
-        {/* Add Employee Button only for hradmin */}
+        {/* Add Employee Button only for hradmin, fixed distance from bottom */}
         {role === 'hradmin' && (
-          <button
-            style={{
-              position: 'absolute',
-              left: 31,
-              bottom: 32,
-              width: 181,
-              height: 40,
-              background: '#3FD270',
-              color: 'white',
-              border: 'none',
-              borderRadius: 8,
-              fontSize: 16,
-              fontFamily: 'Montserrat',
-              fontWeight: 600,
-              cursor: 'pointer',
-              zIndex: 30,
-            }}
-            onClick={() => setShowAdd(true)}
-          >
-            Add Employee
-          </button>
+          <div style={{ marginTop: 'auto', marginBottom: 100 }}>
+            <button
+              style={{
+                width: '100%',
+                height: 40,
+                background: '#3FD270',
+                color: 'white',
+                border: 'none',
+                borderRadius: 8,
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: 'pointer',
+                zIndex: 30,
+              }}
+              onClick={() => setShowAdd(true)}
+            >
+              Add Employee
+            </button>
+          </div>
         )}
       </div>
       <AddEmployeeOverlay
@@ -158,17 +150,17 @@ const EmployeesPage = () => {
           return Array.from(set);
         }, [employees, managerTeam, role])}
       />
-      {/* Employee Cards Grid */}
+      {/* Employee Cards Flex Container */}
       <div
         style={{
-            marginLeft: 241,
-            paddingLeft: 32,
-            paddingTop: 120,
-            paddingRight: 32,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, 250px)',
-            gap: 32,
-            justifyItems: 'start',
+          marginLeft: 265,
+          paddingLeft: 48,
+          paddingTop: 120,
+          paddingRight: 32,
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 32,
+          alignItems: 'flex-start',
         }}
       >
         {(role === 'manager' ? managerTeam : filtered).map(emp => (
@@ -229,22 +221,27 @@ const EmployeesPage = () => {
               </div>
               {/* Info */}
               <div style={{ marginLeft: 16, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
-                <div style={{ color: 'black', fontSize: 14, fontFamily: 'Montserrat', fontWeight: 500 }}>
+                <div style={{ color: 'black', fontSize: 14, fontWeight: 500 }}>
                   {emp.first_name} {emp.last_name}
                 </div>
-                <div style={{ color: 'black', fontSize: 10, fontFamily: 'Montserrat', fontWeight: 400 }}>
+                <div style={{ color: 'black', fontSize: 10, fontWeight: 400 }}>
                   {emp.department}
                 </div>
-                <div style={{ color: 'black', fontSize: 10, fontFamily: 'Montserrat', fontWeight: 400 }}>
-                    {emp.job_title}<br />Joined {emp.hire_date}
-                  </div>
+                <div style={{ color: 'black', fontSize: 10, fontWeight: 400 }}>
+                  {emp.job_title}<br />Joined {emp.hire_date}
+                </div>
               </div>
             </div>
             {/* Email below image, left-aligned */}
-            <div style={{ color: '#555', fontSize: 12, fontFamily: 'Montserrat', fontWeight: 400, marginLeft: 2 }}>{emp.email}</div>
+            <div style={{ color: '#555', fontSize: 12, fontWeight: 400, marginLeft: 2 }}>{emp.email}</div>
           </div>
         ))}
       </div>
+      <EmployeeCardOverlay
+        open={showEmployeeOverlay}
+        onClose={() => setShowEmployeeOverlay(false)}
+        employee={selectedEmployee}
+      />
     </div>
   );
 };

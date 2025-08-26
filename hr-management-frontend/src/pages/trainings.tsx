@@ -220,10 +220,9 @@ const TrainingsPage: React.FC = () => {
         position: 'fixed',
         top: 60,
         left: 0,
-        overflow: 'hidden',
+        overflowY: 'auto',
         zIndex: 20,
         background: 'white',
-        // border: '1px #D9D9D9 solid',
         boxShadow: '2px 0 8px #eee',
         display: 'flex',
         flexDirection: 'column',
@@ -253,15 +252,15 @@ const TrainingsPage: React.FC = () => {
           </button>
         )}
         {(role === 'hradmin' || role === 'trainer') && !showTrainerAssigned && (
-          <div style={{ width: '100%' }}>
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', height: '100%' }}>
             <h3 style={{ fontSize: 18, margin: '16px 0 8px 0', color: '#222' }}>Manage Trainings</h3>
-            <form onSubmit={handleSubmit} style={{ marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
               <input type="text" placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required style={{ padding: 6, borderRadius: 6, border: '1px solid #ccc' }} />
               <input type="text" placeholder="Category" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} required style={{ padding: 6, borderRadius: 6, border: '1px solid #ccc' }} />
               <input type="date" placeholder="Start Date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} required style={{ padding: 6, borderRadius: 6, border: '1px solid #ccc' }} />
               <input type="date" placeholder="End Date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} required style={{ padding: 6, borderRadius: 6, border: '1px solid #ccc' }} />
               <textarea placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} required style={{ padding: 6, borderRadius: 6, border: '1px solid #ccc', minHeight: 60, resize: 'vertical' }} />
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 'auto', marginBottom: 40 }}>
                 <button type="submit" style={{ flex: 1, padding: '6px 0', borderRadius: 6, background: '#3FD270', color: '#fff', border: 'none', fontWeight: 600 }}>{editId ? 'Update' : 'Create'}</button>
                 {editId && (
                   <>
@@ -280,14 +279,14 @@ const TrainingsPage: React.FC = () => {
       {/* Trainings Cards Grid */}
       <div
         style={{
-            marginLeft: 265,
-            paddingLeft: 48,
-            paddingTop: 120,
-            paddingRight: 32,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, 250px)',
-            gap: 32,
-            justifyItems: 'start',
+          marginLeft: 265,
+          paddingLeft: 48,
+          paddingTop: 120,
+          paddingRight: 32,
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 32,
+          alignItems: 'flex-start',
         }}
       >
         {(() => { console.log('Render: trainings', trainings, 'filtered', filtered, 'role', role); return null; })()}
