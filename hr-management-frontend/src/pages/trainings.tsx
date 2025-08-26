@@ -220,15 +220,15 @@ const TrainingsPage: React.FC = () => {
         position: 'fixed',
         top: 60,
         left: 0,
-        overflow: 'auto',
+        overflow: 'hidden',
         zIndex: 20,
         background: 'white',
-        borderRight: '1px #D9D9D9 solid',
+        // border: '1px #D9D9D9 solid',
+        boxShadow: '2px 0 8px #eee',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'stretch',
         padding: '24px 16px 16px 16px',
-        boxShadow: '2px 0 8px #eee'
       }}>
         <div style={{ width: '100%', height: 32, textAlign: 'center', justifyContent: 'center', display: 'flex', flexDirection: 'column', color: '#717171', fontSize: 22, fontWeight: 400, lineHeight: '22px', marginBottom: 16 }}>Filters</div>
         <div style={{ color: '#717171', fontSize: 18, fontWeight: 400, lineHeight: '18px', marginBottom: 8 }}>
