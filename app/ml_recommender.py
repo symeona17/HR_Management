@@ -218,17 +218,30 @@ class HybridRecommender:
         # Get all skills from DB
         from app.database import fetch_results
         all_skills = fetch_results("SELECT id, preferred_label, skill_type FROM skill", ())
-        # Get employee's current skills
-        emp_skill_rows = fetch_results("SELECT skill_id FROM employee_skill WHERE employee_id = %s", (employee_id,))
-        emp_skill_ids = {s['skill_id'] for s in emp_skill_rows}
-        # Recommend missing skills (not already possessed)
-        missing_skills = [s for s in all_skills if s['id'] not in emp_skill_ids]
-        # Score: simple popularity (frequency in training_need) or just topN
-        # For now, just return topN missing skills with descending dummy score
-        scored_skills = [
-            {"id": s['id'], "preferred_label": s['preferred_label'], "skill_type": s['skill_type'], "recommendation_score": 100 - i*5}
-            for i, s in enumerate(missing_skills[:topn])
-        ]
+        # Get employee's current skills and proficiency
+        emp_skill_rows = fetch_results("SELECT skill_id, proficiency_level FROM employee_skill WHERE employee_id = %s", (employee_id,))
+        emp_skill_proficiency = {s['skill_id']: int(s['proficiency_level']) if s['proficiency_level'] is not None else 1 for s in emp_skill_rows}
+
+        scored_skills = []
+        for s in all_skills:
+            skill_id = s['id']
+            if skill_id not in emp_skill_proficiency:
+                # Missing skill: highest score
+                score = 100
+            else:
+                proficiency = emp_skill_proficiency[skill_id]
+                if proficiency >= 5:
+                    continue  # Skip if already fully proficient
+                # Inverse score: lower proficiency = higher score
+                score = max(0, 100 - (proficiency - 1) * 25)  # 1:100, 2:75, 3:50, 4:25, 5:0
+            scored_skills.append({
+                "id": s['id'],
+                "preferred_label": s['preferred_label'],
+                "skill_type": s['skill_type'],
+                "recommendation_score": score
+            })
+        # Sort by score descending and return top N
+        scored_skills = sorted(scored_skills, key=lambda x: x["recommendation_score"], reverse=True)[:topn]
         if not scored_skills:
             return self.fetch_trending_skills_from_web(topn=topn, employee_id=employee_id)
         return scored_skills
