@@ -32,18 +32,23 @@ const AddEmployeeOverlay: React.FC<AddEmployeeOverlayProps> = ({ open, onClose, 
   const [deptDropdown, setDeptDropdown] = useState(false);
   const deptInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const deptDropdownRef = useRef<HTMLDivElement>(null);
 
   // Close overlay when clicking outside modal
   useEffect(() => {
     if (!open) return;
     function handleClickOutside(event: MouseEvent) {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const clickedInsideModal = modalRef.current && modalRef.current.contains(target);
+      const clickedInsideDropdown = deptDropdownRef.current && deptDropdownRef.current.contains(target);
+      const clickedInsideInput = deptInputRef.current && deptInputRef.current.contains(target);
+      if (!clickedInsideModal && !clickedInsideDropdown && !clickedInsideInput) {
         onClose();
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('pointerdown', handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('pointerdown', handleClickOutside);
     };
   }, [open, onClose]);
 
@@ -163,25 +168,35 @@ const AddEmployeeOverlay: React.FC<AddEmployeeOverlayProps> = ({ open, onClose, 
                 onBlur={() => setTimeout(() => setDeptDropdown(false), 120)}
                 style={{ padding: 8, fontSize: 15, borderRadius: 6, border: '1px solid #ccc', width: '100%', boxSizing: 'border-box' }}
                 autoComplete="off"
+                onPointerDown={e => e.stopPropagation()}
               />
               {deptDropdown && departments.length > 0 && newEmployee.department && (
-                <div style={{
-                  position: 'absolute',
-                  top: 38,
-                  left: 0,
-                  right: 0,
-                  background: 'white',
-                  border: '1px solid #ccc',
-                  borderRadius: 6,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                  zIndex: 10,
-                  maxHeight: 150,
-                  overflowY: 'auto',
-                }}>
-                  {departments.filter(dep => dep.toLowerCase().includes(newEmployee.department.toLowerCase()) && dep.trim() !== '').length === 0 ? (
+                <div
+                  ref={deptDropdownRef}
+                  onPointerDown={e => e.stopPropagation()}
+                  style={{
+                    position: 'absolute',
+                    top: 38,
+                    left: 0,
+                    right: 0,
+                    background: 'white',
+                    border: '1px solid #ccc',
+                    borderRadius: 6,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                    zIndex: 10,
+                    maxHeight: 150,
+                    overflowY: 'auto',
+                  }}>
+                  {departments.filter(dep => {
+                    if (!newEmployee.department) return false;
+                    return dep && dep.toLowerCase().includes(newEmployee.department.toLowerCase()) && dep.trim() !== '';
+                  }).length === 0 ? (
                     <div style={{ padding: 8, color: '#888', fontSize: 14 }}>No matches</div>
                   ) : (
-                    departments.filter(dep => dep.toLowerCase().includes(newEmployee.department.toLowerCase()) && dep.trim() !== '').map(dep => (
+                    departments.filter(dep => {
+                      if (!newEmployee.department) return false;
+                      return dep && dep.toLowerCase().includes(newEmployee.department.toLowerCase()) && dep.trim() !== '';
+                    }).map(dep => (
                       <div
                         key={dep}
                         style={{ padding: 8, cursor: 'pointer', fontSize: 15, borderBottom: '1px solid #f0f0f0' }}

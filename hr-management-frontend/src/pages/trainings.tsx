@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import TrainingCardOverlay from '../components/TrainingCardOverlay';
 import { useRouter } from 'next/router';
@@ -283,6 +282,7 @@ const TrainingsPage: React.FC = () => {
           paddingLeft: 48,
           paddingTop: 120,
           paddingRight: 32,
+          paddingBottom: 32, // Add bottom padding equal to gap
           display: 'flex',
           flexWrap: 'wrap',
           gap: 32,

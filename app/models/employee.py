@@ -171,6 +171,9 @@ def get_employee_by_id(employee_id: int):
     employee["trainings"] = ongoing
     return employee
 
+
+from app.models.auth import pwd_context
+
 class Employee(BaseModel):
     """Request/response model for employee records."""
     first_name: str
@@ -182,15 +185,19 @@ class Employee(BaseModel):
     details: str = ""
 
 
+
 def insert_employee(employee: Employee):
-    """Insert a new employee into the database."""
+    """Insert a new employee into the database, with default password '1234' hashed."""
     conn = create_connection()
     cursor = conn.cursor()
+    # Hash the default password
+    default_password = "1234"
+    hashed_password = pwd_context.hash(default_password)
     query = """
-    INSERT INTO employee (first_name, last_name, email, hire_date, department, job_title, details)
-    VALUES (%s, %s, %s, %s, %s, %s, %s)
+    INSERT INTO employee (first_name, last_name, email, hire_date, department, job_title, details, hashed_password)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """
-    values = (employee.first_name, employee.last_name, employee.email, employee.hire_date, employee.department, employee.job_title, employee.details)
+    values = (employee.first_name, employee.last_name, employee.email, employee.hire_date, employee.department, employee.job_title, employee.details, hashed_password)
     cursor.execute(query, values)
     conn.commit()
     cursor.close()

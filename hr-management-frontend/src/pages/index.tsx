@@ -132,6 +132,7 @@ const Home: React.FC = () => {
           gap: '32px',
           alignItems: 'flex-start',
           justifyContent: 'flex-start',
+          paddingBottom: 32, // Add bottom padding equal to gap
         }}
       >
         {/* Overview Card */}

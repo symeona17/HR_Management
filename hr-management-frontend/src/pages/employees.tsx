@@ -1,4 +1,3 @@
-// ...existing code...
 import { useEffect, useState, useMemo } from 'react';
 import { fetchEmployees, searchEmployees } from '../utils/api';
 import { fetchManagerTeam } from '../utils/profileApi';
@@ -157,6 +156,7 @@ const EmployeesPage = () => {
           paddingLeft: 48,
           paddingTop: 120,
           paddingRight: 32,
+          paddingBottom: 32, // Add bottom padding equal to gap
           display: 'flex',
           flexWrap: 'wrap',
           gap: 32,

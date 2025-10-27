@@ -1,4 +1,3 @@
-
 import NavBar from '../components/NavBar';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
@@ -41,6 +40,8 @@ const EmployeeDetailsPage = () => {
   const [recommendedSkills, setRecommendedSkills] = useState<any[]>([]);
   const [recommendedCategories, setRecommendedCategories] = useState<any[]>([]);
   const [loadingRec, setLoadingRec] = useState(false);
+  // Confirmation dialog state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   // Fetch recommended skills to train for admin/manager
   useEffect(() => {
     if (!employee) return;
@@ -389,22 +390,44 @@ const EmployeeDetailsPage = () => {
                 }
               }}>Save</button>
               <button onClick={() => setEditMode(false)}>Cancel</button>
-              <button onClick={async () => {
-                setLoading(true);
-                try {
-                  const empId = employee.id ?? employee.employee_id;
-                  if (empId === undefined) {
-                    setError('Employee ID is missing.');
-                    return;
-                  }
-                  await deleteEmployee(empId);
-                  router.push('/employees');
-                } catch (err) {
-                  setError('Failed to delete employee.');
-                } finally {
-                  setLoading(false);
-                }
-              }} style={{ background: '#e53935', color: 'white' }}>Delete</button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                style={{ background: '#e53935', color: 'white' }}
+              >Delete</button>
+            </div>
+          )}
+          {showDeleteConfirm && (
+            <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
+              <div style={{ background: 'white', borderRadius: 10, padding: 32, minWidth: 320, boxShadow: '0 4px 24px rgba(0,0,0,0.15)', textAlign: 'center' }}>
+                <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 12, color: '#e53935' }}>Are you sure you want to delete this employee?</div>
+                <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
+                  <button
+                    onClick={async () => {
+                      setLoading(true);
+                      try {
+                        const empId = employee.id ?? employee.employee_id;
+                        if (empId === undefined) {
+                          setError('Employee ID is missing.');
+                          setShowDeleteConfirm(false);
+                          return;
+                        }
+                        await deleteEmployee(empId);
+                        router.push('/employees');
+                      } catch (err) {
+                        setError('Failed to delete employee.');
+                      } finally {
+                        setLoading(false);
+                        setShowDeleteConfirm(false);
+                      }
+                    }}
+                    style={{ background: '#e53935', color: 'white', borderRadius: 6, padding: '8px 18px', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}
+                  >Yes, Delete</button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    style={{ background: '#888', color: 'white', borderRadius: 6, padding: '8px 18px', fontWeight: 500, fontSize: 16, cursor: 'pointer' }}
+                  >Cancel</button>
+                </div>
+              </div>
             </div>
           )}
         </div>

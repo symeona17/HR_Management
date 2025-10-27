@@ -14,3 +14,8 @@ numpy
 scikit-learn
 joblib
 rapidfuzz
+# --- Anaytics dependencies ---
+openpyxl
+pytest
+requests
+httpx
