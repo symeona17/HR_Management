@@ -105,13 +105,12 @@ const AnalyticsPage: React.FC = () => {
           const message = String(err?.message || err || '');
           if (name === 'AbortError' || name === 'NotAllowedError' || /cancel/i.test(message)) {
             console.info('User cancelled save file picker - aborting export');
-            return; // do not fallback to automatic download
+            return;
           }
           console.warn('Save file picker failed, falling back to download', err);
         }
       }
 
-      // Fallback: create an object URL and trigger a download (browser will prompt or save per settings)
       const objectUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = objectUrl;
