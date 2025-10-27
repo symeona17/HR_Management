@@ -10,6 +10,7 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false); // Added for eye toggle
   const router = useRouter();
+  const [showContact, setShowContact] = useState(false);
 
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -248,18 +249,23 @@ const LoginPage: React.FC = () => {
           }}>
             Don't have an account ?
           </span>
-          <span style={{
-            color: "#1570EF",
-            fontSize: 16,
-            fontFamily: "Poppins, Montserrat, sans-serif",
-            fontWeight: 400,
-            textTransform: "capitalize",
-            lineHeight: "16px",
-            cursor: "pointer",
-          }}>
-            Contact Administrator
-          </span>
+          <span
+                style={{
+                  color: "#1570EF",
+                  fontSize: 16,
+                  fontFamily: "Poppins, Montserrat, sans-serif",
+                  fontWeight: 400,
+                  textTransform: "capitalize",
+                  lineHeight: "16px",
+                  cursor: "pointer",
+                  userSelect: "none",
+                }}
+                onClick={() => alert("Kindly email andreas.symeonidis1@gmail.com")}
+              >
+                Contact Administrator
+              </span>
         </div>
+        
       </div>
     </div>
   );
