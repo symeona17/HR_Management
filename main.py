@@ -1,5 +1,7 @@
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -40,3 +42,14 @@ app.include_router(analytics_router, prefix="/analytics", tags=["analytics"])
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the HR Management API"}
+
+
+# Serve favicon requests so browsers don't generate 404s in server logs
+@app.get("/favicon.ico")
+def favicon():
+    # Look for the frontend favicon in the hr-management-frontend/public folder
+    candidate = Path(__file__).resolve().parent / "hr-management-frontend" / "public" / "favicon.ico"
+    if candidate.exists():
+        return FileResponse(str(candidate))
+    # fallback: return 204 No Content to avoid a 404
+    return FileResponse(str(candidate))
