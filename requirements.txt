@@ -1,0 +1,21 @@
+fastapi
+vaderSentiment
+uvicorn
+mysql-connector-python
+pydantic
+python-jose
+passlib
+sqlalchemy
+python-dotenv
+python-multipart
+# --- ML dependencies ---
+pandas
+numpy
+scikit-learn
+joblib
+rapidfuzz
+# --- Anaytics dependencies ---
+openpyxl
+pytest
+requests
+httpx
