@@ -27,3 +27,6 @@ hr-management-frontend/next.config.js
 
 #Data
 data/
+
+#Scripts
+scripts/
