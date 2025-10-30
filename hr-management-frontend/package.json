@@ -6,8 +6,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p $PORT",
+    "heroku-postbuild": "npm run build",
     "lint": "eslint ."
+  },
+  "engines": {
+    "node": "18.x"
   },
   "dependencies": {
     "next": "^15.4.6",

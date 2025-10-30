@@ -1,3 +1,5 @@
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+
 // Function to send feedback for a recommended skill
 export async function sendSkillFeedback(employeeId: string | number, skillId: string | number, vote: 'up' | 'down') {
     const res = await fetch(`${API_BASE_URL}/employee/${employeeId}/skill-feedback`, {
@@ -54,19 +56,19 @@ export async function submitFeedback(feedbackData: Record<string, any>) {
 }
 // Function to fetch a single employee by ID
 export async function fetchEmployeeById(id: string | number) {
-    const res = await fetch(`http://localhost:8000/employee/${id}`);
+    const res = await fetch(`${API_BASE_URL}/employee/${id}`);
     if (!res.ok) throw new Error('Failed to fetch employee');
     return await res.json();
 }
 // Function to fetch all trainings
 export async function fetchTrainings() {
-    const res = await fetch('http://localhost:8000/training/');
+    const res = await fetch(`${API_BASE_URL}/training/`);
     if (!res.ok) throw new Error('Failed to fetch trainings');
     return await res.json();
 }
 
 
-export const API_BASE_URL = 'http://localhost:8000'; // Adjust the base URL as needed
+// (API_BASE_URL is declared at the top so it can be set via NEXT_PUBLIC_API_BASE_URL)
 
 // Function to create a new training
 export const createTraining = async (trainingData: Record<string, any>) => {
