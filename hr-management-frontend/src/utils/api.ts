@@ -132,7 +132,7 @@ export const createSkill = async (skillData: Record<string, any>) => {
 
 // Function to fetch all employees
 export async function fetchEmployees() {
-  const res = await fetch('http://localhost:8000/employee/');
+    const res = await fetch(`${API_BASE_URL}/employee/`);
   if (!res.ok) throw new Error('Failed to fetch');
   return await res.json();
 }

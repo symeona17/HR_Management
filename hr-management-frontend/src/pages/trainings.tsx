@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import TrainingCardOverlay from '../components/TrainingCardOverlay';
 import { useRouter } from 'next/router';
 import NavBar from '../components/NavBar';
-import { fetchTrainings, createTraining, updateTraining, deleteTraining, fetchEmployees, requestTraining } from '../utils/api';
+import { API_BASE_URL, fetchTrainings, createTraining, updateTraining, deleteTraining, fetchEmployees, requestTraining } from '../utils/api';
 
 // Helper to fetch assigned trainings for employee
-const API_BASE_URL = 'http://localhost:8000';
 async function fetchAssignedTrainings(employeeId: number) {
   const res = await fetch(`${API_BASE_URL}/employee/${employeeId}/assigned-trainings`);
   if (!res.ok) throw new Error('Failed to fetch assigned trainings');

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { API_BASE_URL } from '../utils/api';
 
 type NewEmployee = {
   first_name: string;
@@ -124,7 +125,7 @@ const AddEmployeeOverlay: React.FC<AddEmployeeOverlayProps> = ({ open, onClose, 
           setError(null);
           setSuccess(false);
           try {
-            const res = await fetch('http://localhost:8000/employee/', {
+            const res = await fetch(`${API_BASE_URL}/employee/`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(newEmployee),
