@@ -1,4 +1,4 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
 
 // Function to send feedback for a recommended skill
 export async function sendSkillFeedback(employeeId: string | number, skillId: string | number, vote: 'up' | 'down') {
