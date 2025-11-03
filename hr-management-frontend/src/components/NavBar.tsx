@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { API_BASE_URL } from '../utils/api';
 
 type NavBarProps = {
   showSearch?: boolean;
@@ -238,11 +239,13 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
             marginLeft: windowWidth < 400 ? 16 : windowWidth < 750 ? 32 : windowWidth < 1200 ? 56 : 90,
           }}
         >
-          <img
-            src="/bell.png"
-            alt="Notifications"
-            style={{ height: windowWidth < 400 ? 16 : scrolled ? 20 : 26, objectFit: 'contain', display: 'block', transition: 'height 0.2s' }}
-          />
+          {/* Notification icon, removed in this version
+            <img
+              src="/bell.png"
+              alt="Notifications"
+              style={{ height: windowWidth < 400 ? 16 : scrolled ? 20 : 26, objectFit: 'contain', display: 'block', transition: 'height 0.2s' }}
+            />
+          */}
           <div style={{ position: 'relative' }}>
             <img
               src="/person.png"
@@ -269,7 +272,12 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
                 <a href="/profile" style={{ padding: '8px 16px', fontFamily: 'Montserrat', fontSize: 15, color: '#333', textDecoration: 'none', cursor: 'pointer', borderBottom: '1px solid #eee' }}>Profile</a>
                 <div
                   style={{ padding: '8px 16px', fontFamily: 'Montserrat', fontSize: 15, color: '#D92D20', cursor: 'pointer' }}
-                  onClick={() => {
+                  onClick={async () => {
+                    try {
+                      await fetch(`${API_BASE_URL}/logout`, { method: 'POST', credentials: 'include' });
+                    } catch (e) {
+                      // ignore network errors
+                    }
                     localStorage.removeItem('access_token');
                     localStorage.removeItem('user_email');
                     localStorage.removeItem('user_role');

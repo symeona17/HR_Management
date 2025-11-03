@@ -4,35 +4,49 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 
 import type { AppProps } from 'next/app';
+import { fetchMe } from '../utils/authApi';
 
 function MyApp({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    // Don't check auth on login page
-    if (router.pathname === '/login') {
-      setAuthChecked(true);
-      return;
-    }
+    let mounted = true;
 
-    // Check for token in localStorage (client-only)
-    if (typeof window === 'undefined') {
-      // We are on server — delay until client
-      return;
-    }
+    const check = async () => {
+      // Don't check auth on login page
+      if (router.pathname === '/login') {
+        if (mounted) setAuthChecked(true);
+        return;
+      }
 
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      // redirect to login; do not render protected page
-      router.replace('/login');
-      // Do not set authChecked=true here; when navigation reaches /login the effect
-      // will run again and mark authChecked true for that page.
-      return;
-    }
+      // Client-only check: call /me (sends cookie)
+      try {
+        const me = await fetchMe();
+        // save minimal info for UI
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('user_email', me.email || '');
+          localStorage.setItem('user_role', me.role || '');
+        }
+        if (mounted) setAuthChecked(true);
+      } catch (err) {
+        // not authenticated
+        router.replace('/login');
+      }
+    };
 
-    // Token present — allow rendering
-    setAuthChecked(true);
+    check();
+
+    // refresh session on route change: call /me to renew cookie
+    const handleRouteChange = () => {
+      fetchMe().catch(() => {});
+    };
+    router.events.on('routeChangeComplete', handleRouteChange);
+
+    return () => {
+      mounted = false;
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
   }, [router.pathname]);
 
   // While we haven't checked auth (or are in the middle of redirecting), show a small spinner

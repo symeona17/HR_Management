@@ -8,11 +8,16 @@ import {
   fetchManagerAnalytics,
   managerAssignTraining
 } from '../utils/profileApi';
+import { fetchMe } from '../utils/authApi';
+import { API_BASE_URL, apiFetch } from '../utils/api';
 
 const ProfilePage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
   const [userId, setUserId] = useState<number | null>(null);
+  const [profile, setProfile] = useState<any | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [formState, setFormState] = useState({ first_name: '', last_name: '', job_title: '', department: '', details: '' });
   // Trainer state
   const [trainerTrainings, setTrainerTrainings] = useState<any[]>([]);
   const [trainerFeedback, setTrainerFeedback] = useState<any[]>([]);
@@ -23,12 +28,45 @@ const ProfilePage: React.FC = () => {
   // Assignment form state
   const [assignEmployeeId, setAssignEmployeeId] = useState('');
   const [assignTrainingId, setAssignTrainingId] = useState('');
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordStatus, setPasswordStatus] = useState('');
 
   useEffect(() => {
-    setEmail(localStorage.getItem('user_email') || 'Unknown');
-    setRole(localStorage.getItem('user_role') || 'Unknown');
-    const id = localStorage.getItem('user_id');
-    setUserId(id ? parseInt(id) : null);
+    const load = async () => {
+      try {
+        const me = await fetchMe();
+        setEmail(me.email || 'Unknown');
+        setRole(me.role || 'Unknown');
+        setUserId(me.id || null);
+        // fetch employee record if employee id available
+        if (me.id) {
+          const res = await apiFetch(`${API_BASE_URL}/employee/${me.id}`);
+          if (res.ok) {
+            const emp = await res.json();
+            setProfile(emp);
+            setFormState({
+              first_name: emp.first_name || '',
+              last_name: emp.last_name || '',
+              job_title: emp.job_title || '',
+              department: emp.department || '',
+              details: emp.details || '',
+            });
+            // persist minimal info for UI if needed
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('user_email', emp.email || '');
+              localStorage.setItem('user_role', emp.role || me.role || '');
+              localStorage.setItem('user_id', String(emp.id || me.id));
+            }
+          }
+        }
+      } catch (err) {
+        // failed to load - ignore for now (app-level auth should redirect)
+      }
+    };
+    load();
   }, []);
 
   useEffect(() => {
@@ -41,6 +79,29 @@ const ProfilePage: React.FC = () => {
       fetchManagerAnalytics(userId).then(data => setManagerAnalytics(data.analytics || []));
     }
   }, [userId, role]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userId) return;
+    try {
+      const res = await apiFetch(`${API_BASE_URL}/employee/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formState),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      const json = await res.json();
+      // refresh profile
+      const r2 = await apiFetch(`${API_BASE_URL}/employee/${userId}`);
+      if (r2.ok) {
+        const updated = await r2.json();
+        setProfile(updated);
+        setEditing(false);
+      }
+    } catch (err) {
+      alert('Failed to save profile');
+    }
+  };
 
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +125,71 @@ const ProfilePage: React.FC = () => {
         </div>
         <div style={{ fontFamily: 'Montserrat', fontSize: 18, marginBottom: 8 }}>
           <b>Role:</b> <span>{role}</span>
+        </div>
+
+        {/* Basic Information (view / edit) */}
+        <div style={{ marginTop: 24, marginBottom: 8 }}>
+          <h3 style={{ marginBottom: 12 }}>Basic Information</h3>
+          {!editing ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <div style={{ color: '#666', fontSize: 14 }}>First name</div>
+                <div style={{ fontSize: 16, fontFamily: 'Montserrat' }}>{profile?.first_name || '-'}</div>
+              </div>
+              <div>
+                <div style={{ color: '#666', fontSize: 14 }}>Last name</div>
+                <div style={{ fontSize: 16, fontFamily: 'Montserrat' }}>{profile?.last_name || '-'}</div>
+              </div>
+              <div>
+                <div style={{ color: '#666', fontSize: 14 }}>Job title</div>
+                <div style={{ fontSize: 16, fontFamily: 'Montserrat' }}>{profile?.job_title || '-'}</div>
+              </div>
+              <div>
+                <div style={{ color: '#666', fontSize: 14 }}>Department</div>
+                <div style={{ fontSize: 16, fontFamily: 'Montserrat' }}>{profile?.department || '-'}</div>
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <div style={{ color: '#666', fontSize: 14 }}>Details</div>
+                <div style={{ fontSize: 16, fontFamily: 'Montserrat' }}>{profile?.details || '-'}</div>
+              </div>
+              <div style={{ gridColumn: '1 / -1', marginTop: 8 }}>
+                <button onClick={() => setEditing(true)}>Edit</button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSaveProfile} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, color: '#666' }}>First name</label>
+                <input value={formState.first_name} onChange={e => setFormState(prev => ({ ...prev, first_name: e.target.value }))} required />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, color: '#666' }}>Last name</label>
+                <input value={formState.last_name} onChange={e => setFormState(prev => ({ ...prev, last_name: e.target.value }))} required />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, color: '#666' }}>Job title</label>
+                <input value={formState.job_title} onChange={e => setFormState(prev => ({ ...prev, job_title: e.target.value }))} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, color: '#666' }}>Department</label>
+                <input value={formState.department} onChange={e => setFormState(prev => ({ ...prev, department: e.target.value }))} />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', fontSize: 13, color: '#666' }}>Details</label>
+                <textarea value={formState.details} onChange={e => setFormState(prev => ({ ...prev, details: e.target.value }))} rows={4} />
+              </div>
+              <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8 }}>
+                <button type="submit">Save</button>
+                <button type="button" onClick={() => { setEditing(false); /* reset formState to profile values */ setFormState({
+                  first_name: profile?.first_name || '',
+                  last_name: profile?.last_name || '',
+                  job_title: profile?.job_title || '',
+                  department: profile?.department || '',
+                  details: profile?.details || '',
+                }); }}>Cancel</button>
+              </div>
+            </form>
+          )}
         </div>
 
         {/* Trainer Dashboard */}
@@ -164,6 +290,65 @@ const ProfilePage: React.FC = () => {
             (This is a simple profile page. Add more info as needed.)
           </div>
         )}
+      </div>
+
+      {/* Change Password */}
+      <div style={{ maxWidth: 800, margin: '16px auto', padding: 24, background: '#fff', borderRadius: 12, boxShadow: '0 1px 8px rgba(0,0,0,0.04)' }}>
+        <h3 style={{ marginBottom: 12 }}>Change Password</h3>
+        <form onSubmit={async (e) => {
+          e.preventDefault();
+          setPasswordStatus('');
+          if (!userId) {
+            setPasswordStatus('User not loaded');
+            return;
+          }
+          if (newPassword !== confirmPassword) {
+            setPasswordStatus('New passwords do not match');
+            return;
+          }
+          // Ensure the new password is actually different from the current password
+          if (newPassword === currentPassword) {
+            setPasswordStatus('New password must be different from current password');
+            return;
+          }
+          try {
+            const res = await apiFetch(`${API_BASE_URL}/change-password`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+            });
+            if (res.ok) {
+              setPasswordStatus('Password changed successfully');
+              setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+            } else {
+              const txt = await res.text();
+              let msg = txt || 'Failed to change password';
+              try { const j = JSON.parse(txt); msg = j.detail || j.msg || msg; } catch(_){}
+              setPasswordStatus(msg);
+            }
+          } catch (err) {
+            setPasswordStatus('Failed to change password');
+          }
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 13, color: '#666' }}>Current password</label>
+              <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 13, color: '#666' }}>New password</label>
+              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
+            </div>
+            <div style={{ gridColumn: '2 / 3' }}>
+              <label style={{ display: 'block', fontSize: 13, color: '#666' }}>Confirm new password</label>
+              <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+            </div>
+            <div style={{ gridColumn: '1 / -1', marginTop: 8 }}>
+              <button type="submit">Change password</button>
+              <span style={{ marginLeft: 12, color: passwordStatus.toLowerCase().includes('success') ? 'green' : 'red' }}>{passwordStatus}</span>
+            </div>
+          </div>
+        </form>
       </div>
     </div>
   );

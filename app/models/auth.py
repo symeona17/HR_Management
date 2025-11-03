@@ -4,20 +4,22 @@ Authentication endpoints and utilities for the HR Management system.
 Handles JWT-based login, password hashing, and user info retrieval.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
+from fastapi.security import OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
 import datetime
-from app.database.database import fetch_results
+import os
+from app.database.database import fetch_results, execute_query
 
 router = APIRouter()
 
 # JWT configuration
-SECRET_KEY = "your-secret-key"  # Change this!
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")  # set in env in production
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+# token lifetime in minutes
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -38,23 +40,67 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+def create_access_token_cookie(response: Response, data: dict, expires_delta: datetime.timedelta | None = None):
+    token = create_access_token(data=data, expires_delta=expires_delta)
+    # set cookie (httpOnly) - secure flag should be true in production
+    secure_flag = os.getenv("ENV", "development") == "production"
+    max_age = int((expires_delta or datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)).total_seconds())
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=secure_flag,
+        samesite="lax",
+        max_age=max_age,
+        expires=max_age,
+        path='/'
+    )
+    return token
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
-    """Get the current user from a JWT token."""
+
+def _get_token_from_request(request: Request):
+    # Prefer cookie-based token
+    token = None
+    if request.cookies.get("access_token"):
+        token = request.cookies.get("access_token")
+    else:
+        # fallback to Authorization header
+        auth: str | None = request.headers.get("authorization")
+        if auth and auth.lower().startswith("bearer "):
+            token = auth.split(" ", 1)[1]
+    return token
+
+
+def get_current_user(request: Request, response: Response):
+    """Get the current user from JWT stored in cookie or Authorization header.
+    Also refreshes the cookie expiry (sliding session) on each successful call.
+    """
+    token = _get_token_from_request(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
         query = "SELECT * FROM users WHERE email = %s"
         users = fetch_results(query, (email,))
         if not users:
             raise HTTPException(status_code=404, detail="User not found")
-        return users[0]
+        user = users[0]
+        # refresh cookie to extend session (sliding expiration)
+        try:
+            expires = datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+            create_access_token_cookie(response, {"sub": user['email'], "id": user['id'], "role": user.get('role')}, expires_delta=expires)
+        except Exception:
+            # non-fatal if cookie refresh fails
+            pass
+        return user
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 @router.post("/login", response_model=Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends()):
+def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
     """Authenticate a user and return a JWT access token."""
     query = "SELECT * FROM users WHERE email = %s"
     users = fetch_results(query, (form_data.username,))
@@ -67,11 +113,21 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     except Exception as e:
         print(f"Password verification error for user {user['email']}: {e}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Password verification failed: {str(e)}")
+    expires = datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user['email'], "id": user['id'], "role": user['role']},
-        expires_delta=datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_delta=expires
     )
+    # set httpOnly cookie
+    create_access_token_cookie(response, {"sub": user['email'], "id": user['id'], "role": user['role']}, expires_delta=expires)
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/logout")
+def logout(response: Response):
+    """Clear the session cookie to log the user out."""
+    response.delete_cookie("access_token", path='/')
+    return {"msg": "logged out"}
 
 @router.get("/me")
 def read_users_me(current_user=Depends(get_current_user)):
@@ -92,3 +148,29 @@ def read_users_me(current_user=Depends(get_current_user)):
         "email": current_user['email'],
         "role": current_user['role']
     }
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/change-password")
+def change_password(data: PasswordChange, current_user=Depends(get_current_user)):
+    """Change the authenticated user's password.
+    Verifies the provided current password and updates the stored hashed password.
+    """
+    # current_user is loaded from the users table by get_current_user
+    if not verify_password(data.current_password, current_user.get('hashed_password', '')):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Current password incorrect")
+    # Don't allow setting the same password as the current one
+    if verify_password(data.new_password, current_user.get('hashed_password', '')):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New password must be different from the current password")
+    # Hash the new password and update the users table
+    new_hashed = pwd_context.hash(data.new_password)
+    try:
+        execute_query("UPDATE users SET hashed_password = %s WHERE id = %s", (new_hashed, current_user['id']))
+    except Exception as e:
+        print(f"Failed to update password for user {current_user.get('email')}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update password")
+    return {"msg": "Password updated successfully"}
