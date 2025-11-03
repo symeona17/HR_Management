@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { API_BASE_URL } from '../utils/api';
+import { API_BASE_URL, apiFetch } from '../utils/api';
 
 type NavBarProps = {
   showSearch?: boolean;
@@ -274,7 +274,7 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
                   style={{ padding: '8px 16px', fontFamily: 'Montserrat', fontSize: 15, color: '#D92D20', cursor: 'pointer' }}
                   onClick={async () => {
                     try {
-                      await fetch(`${API_BASE_URL}/logout`, { method: 'POST', credentials: 'include' });
+                      await apiFetch(`${API_BASE_URL}/logout`, { method: 'POST' });
                     } catch (e) {
                       // ignore network errors
                     }

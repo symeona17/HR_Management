@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import NavBar from '../components/NavBar';
-import { API_BASE_URL } from '../utils/api';
+import { API_BASE_URL, apiFetch } from '../utils/api';
+import { fmtNumber } from '../utils/format';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -16,6 +17,7 @@ import {
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 type MonthlyPoint = { month: string; avg_feedback: number; n: number };
+
 
 const AnalyticsPage: React.FC = () => {
   const [overview, setOverview] = useState<any>(null);
@@ -37,16 +39,14 @@ const AnalyticsPage: React.FC = () => {
       if (opts.manager) qs.append('manager_id', opts.manager);
 
       const base = `${API_BASE_URL}/analytics`;
-      const oRes = await fetch(`${base}/overview?${qs.toString()}`);
+  const oRes = await apiFetch(`${base}/overview?${qs.toString()}`);
       const oJson = await oRes.json();
       setOverview(oJson);
-
-      const tRes = await fetch(`${base}/trainings?${qs.toString()}`);
-      const tJson = await tRes.json();
+  const tRes = await apiFetch(`${base}/trainings?${qs.toString()}`);
+  const tJson = await tRes.json();
       setTrainings(tJson.trainings || []);
-
-      const fRes = await fetch(`${base}/feedback?${qs.toString()}`);
-      const fJson = await fRes.json();
+  const fRes = await apiFetch(`${base}/feedback?${qs.toString()}`);
+  const fJson = await fRes.json();
       setFeedback(fJson);
     } catch (err) {
       console.error('Failed to load analytics', err);
@@ -68,7 +68,7 @@ const AnalyticsPage: React.FC = () => {
     const url = `${API_BASE_URL}/analytics/export?format=${format}${qs.toString() ? `&${qs.toString()}` : ''}`;
     try {
       // Fetch the file as a blob
-      const res = await fetch(url);
+  const res = await apiFetch(url);
       if (!res.ok) throw new Error('Export failed');
       const blob = await res.blob();
 
@@ -147,7 +147,7 @@ const AnalyticsPage: React.FC = () => {
           </div>
           <div style={{ background: '#f7f7f7', padding: 18, borderRadius: 12, minWidth: 220 }}>
             <div style={{ fontSize: 12, color: '#888' }}>Feedback (avg)</div>
-            <div style={{ fontSize: 28, fontWeight: 700 }}>{overview ? (overview.avg_feedback !== null ? overview.avg_feedback.toFixed(2) : 'N/A') : '—'}</div>
+            <div style={{ fontSize: 28, fontWeight: 700 }}>{overview ? (overview.avg_feedback !== null && overview.avg_feedback !== undefined ? fmtNumber(overview.avg_feedback) : 'N/A') : '—'}</div>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
             <button onClick={() => handleExport('csv')} style={{ background: '#3FD270', color: 'white', border: 'none', borderRadius: 6, padding: '10px 18px', fontWeight: 600, cursor: 'pointer' }}>Export CSV</button>
@@ -186,7 +186,7 @@ const AnalyticsPage: React.FC = () => {
                   {monthly.map((m: MonthlyPoint) => (
                     <div key={m.month} style={{ background: 'white', padding: 8, borderRadius: 8, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', minWidth: 96 }}>
                       <div style={{ fontSize: 12, color: '#888' }}>{m.month}</div>
-                      <div style={{ fontWeight: 700 }}>{m.avg_feedback !== null ? Number(m.avg_feedback).toFixed(2) : 'N/A'}</div>
+                      <div style={{ fontWeight: 700 }}>{m.avg_feedback !== null && m.avg_feedback !== undefined ? fmtNumber(m.avg_feedback) : 'N/A'}</div>
                       <div style={{ fontSize: 12, color: '#aaa' }}>{m.n} pts</div>
                     </div>
                   ))}
@@ -230,7 +230,7 @@ const AnalyticsPage: React.FC = () => {
                   {feedback?.top_positive?.map((p: any) => (
                     <tr key={p.employee_id} style={{ borderBottom: '1px solid #fff' }}>
                       <td style={{ padding: 8 }}>{p.first_name} {p.last_name}</td>
-                      <td style={{ padding: 8, textAlign: 'right' }}>{Number(p.avg_feedback).toFixed(2)}</td>
+                      <td style={{ padding: 8, textAlign: 'right' }}>{fmtNumber(p.avg_feedback)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -244,7 +244,7 @@ const AnalyticsPage: React.FC = () => {
                   {feedback?.top_negative?.map((p: any) => (
                     <tr key={p.employee_id} style={{ borderBottom: '1px solid #fff' }}>
                       <td style={{ padding: 8 }}>{p.first_name} {p.last_name}</td>
-                      <td style={{ padding: 8, textAlign: 'right' }}>{Number(p.avg_feedback).toFixed(2)}</td>
+                      <td style={{ padding: 8, textAlign: 'right' }}>{fmtNumber(p.avg_feedback)}</td>
                     </tr>
                   ))}
                 </tbody>

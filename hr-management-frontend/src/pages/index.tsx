@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import NavBar from '../components/NavBar';
 import AddEmployeeOverlay from '../components/AddEmployeeOverlay';
 import { fetchEmployees, fetchTrainings, fetchAllFeedback } from '../utils/api';
+import { fmtNumber } from '../utils/format';
 
 
 const Home: React.FC = () => {
@@ -15,6 +16,8 @@ const Home: React.FC = () => {
   const router = useRouter();
   const [showAdd, setShowAdd] = useState(false);
   const [departments, setDepartments] = useState<string[]>([]);
+  const [departmentsCount, setDepartmentsCount] = useState<number | null>(null);
+  const [topDepartments, setTopDepartments] = useState<Array<{ dept: string; count: number }>>([]);
   const [role, setRole] = useState('');
   const [feedback, setFeedback] = useState<any[]>([]);
   const [avgSentiment, setAvgSentiment] = useState<number | null>(null);
@@ -57,8 +60,17 @@ const Home: React.FC = () => {
           if (feedbackArr.length > 0) {
             const avg = feedbackArr.reduce((sum, f) => sum + (typeof f.sentiment_score === 'number' ? f.sentiment_score : 0), 0) / feedbackArr.length;
             setAvgSentiment(avg);
+            // compute top departments by feedback count
+            const deptCounts: Record<string, number> = {};
+            feedbackArr.forEach((f: any) => {
+              const d = f.department || '-';
+              deptCounts[d] = (deptCounts[d] || 0) + 1;
+            });
+            const top = Object.entries(deptCounts).map(([dept, count]) => ({ dept, count })).sort((a, b) => b.count - a.count).slice(0, 3);
+            setTopDepartments(top);
           } else {
             setAvgSentiment(null);
+            setTopDepartments([]);
           }
         })
         .catch(() => {
@@ -78,6 +90,7 @@ const Home: React.FC = () => {
           const set = new Set<string>();
           data.employee.forEach((emp: any) => set.add(emp.department));
           setDepartments(Array.from(set));
+          setDepartmentsCount(Array.from(set).filter(Boolean).length);
         }
       } catch (e) {
         setTotalEmployees(null);
@@ -143,10 +156,10 @@ const Home: React.FC = () => {
             <div style={{ color: 'black', fontSize: 14, fontWeight: 400, alignSelf: 'center' }}>Total Employees</div>
             <div style={{ color: 'black', fontSize: 18, fontWeight: 700, textAlign: 'right' }}>{ongoingTrainings !== null ? ongoingTrainings : '...'}</div>
             <div style={{ color: 'black', fontSize: 14, fontWeight: 400, alignSelf: 'center' }}>Ongoing Trainings</div>
-            <div style={{ color: 'black', fontSize: 18, fontWeight: 700, textAlign: 'right' }}>56%</div>
-            <div style={{ color: 'black', fontSize: 14, fontWeight: 400, alignSelf: 'center' }}>Average Training Progress</div>
-            <div style={{ color: 'black', fontSize: 18, fontWeight: 700, textAlign: 'right' }}>8.9<span style={{ color: 'black', fontSize: 14, fontWeight: 400 }}>/10</span></div>
-            <div style={{ color: 'black', fontSize: 14, fontWeight: 400, alignSelf: 'center' }}>Satisfaction Score</div>
+            <div style={{ color: 'black', fontSize: 18, fontWeight: 700, textAlign: 'right' }}>{departmentsCount !== null ? departmentsCount : '...'}</div>
+            <div style={{ color: 'black', fontSize: 14, fontWeight: 400, alignSelf: 'center' }}>Departments</div>
+            <div style={{ color: 'black', fontSize: 18, fontWeight: 700, textAlign: 'right' }}>{avgSentiment !== null ? fmtNumber(avgSentiment) : 'N/A'}</div>
+            <div style={{ color: 'black', fontSize: 14, fontWeight: 400, alignSelf: 'center' }}>Avg Sentiment</div>
           </div>
         </div>
         {/* Quick Actions Card (moved up) */}
@@ -159,9 +172,23 @@ const Home: React.FC = () => {
             >
               Add New Employee
             </button>
-            <button style={{ width: '100%', height: 54, background: '#F5F5F5', borderRadius: 5, border: '1.5px #D9D9D9 solid', color: 'black', fontSize: 14, fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }}>Assign Training</button>
-            <button style={{ width: '100%', height: 54, background: '#F5F5F5', borderRadius: 5, border: '1.5px #D9D9D9 solid', color: 'black', fontSize: 14, fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }}>Generate Report</button>
-            <button style={{ width: '100%', height: 54, background: '#F5F5F5', borderRadius: 5, border: '1.5px #D9D9D9 solid', color: 'black', fontSize: 14, fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }}>Export Data</button>
+            <button
+              style={{ width: '100%', height: 54, background: '#F5F5F5', borderRadius: 5, border: '1.5px #D9D9D9 solid', color: 'black', fontSize: 14, fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }}
+            >
+              Assign Training
+            </button>
+            <button
+              style={{ width: '100%', height: 54, background: '#F5F5F5', borderRadius: 5, border: '1.5px #D9D9D9 solid', color: 'black', fontSize: 14, fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }}
+              onClick={() => router.push('/analytics')}
+            >
+              Generate Report
+            </button>
+            <button
+              style={{ width: '100%', height: 54, background: '#F5F5F5', borderRadius: 5, border: '1.5px #D9D9D9 solid', color: 'black', fontSize: 14, fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }}
+              onClick={() => router.push('/analytics')}
+            >
+              Export Data
+            </button>
           </div>
         </div>
         {/* Training Insights Card */}
@@ -256,7 +283,7 @@ const Home: React.FC = () => {
                         <td style={{ padding: 6, textAlign: 'center', verticalAlign: 'middle' }}>{name}</td>
                         <td style={{ padding: 6, textAlign: 'center', verticalAlign: 'middle' }}>{dept}</td>
                         <td style={{ padding: 6, textAlign: 'center', verticalAlign: 'middle' }}>{f.feedback_date}</td>
-                        <td style={{ padding: 6, textAlign: 'center', verticalAlign: 'middle' }}>{typeof f.sentiment_score === 'number' ? f.sentiment_score.toFixed(2) : 'N/A'}</td>
+                        <td style={{ padding: 6, textAlign: 'center', verticalAlign: 'middle' }}>{fmtNumber(f.sentiment_score)}</td>
                       </tr>
                     );
                   })}
@@ -271,7 +298,7 @@ const Home: React.FC = () => {
                 </tbody>
               </table>
             </div>
-            <button style={{ marginTop: 8, background: '#F5F5F5', border: '1.5px #D9D9D9 solid', borderRadius: 5, padding: '8px 16px', fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }} onClick={() => alert('Feature coming soon!')}>View Full Feedback Analytics</button>
+            <button style={{ marginTop: 8, background: '#F5F5F5', border: '1.5px #D9D9D9 solid', borderRadius: 5, padding: '8px 16px', fontWeight: 500, fontFamily: 'Montserrat', cursor: 'pointer' }} onClick={() => router.push('/analytics')}>View Full Feedback Analytics</button>
           </div>
         )}
       </div>

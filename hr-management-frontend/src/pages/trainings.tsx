@@ -2,23 +2,23 @@ import React, { useState, useEffect } from 'react';
 import TrainingCardOverlay from '../components/TrainingCardOverlay';
 import { useRouter } from 'next/router';
 import NavBar from '../components/NavBar';
-import { API_BASE_URL, fetchTrainings, createTraining, updateTraining, deleteTraining, fetchEmployees, requestTraining } from '../utils/api';
+import { API_BASE_URL, fetchTrainings, createTraining, updateTraining, deleteTraining, fetchEmployees, requestTraining, apiFetch } from '../utils/api';
 
 // Helper to fetch assigned trainings for employee
 async function fetchAssignedTrainings(employeeId: number) {
-  const res = await fetch(`${API_BASE_URL}/employee/${employeeId}/assigned-trainings`);
+  const res = await apiFetch(`${API_BASE_URL}/employee/${employeeId}/assigned-trainings`);
   if (!res.ok) throw new Error('Failed to fetch assigned trainings');
   return res.json();
 }
 // Helper to fetch trainings assigned to a trainer
 async function fetchTrainerAssignedTrainings(trainerId: number) {
-  const res = await fetch(`${API_BASE_URL}/trainer/${trainerId}/trainings`);
+  const res = await apiFetch(`${API_BASE_URL}/trainer/${trainerId}/trainings`);
   if (!res.ok) throw new Error('Failed to fetch assigned trainings for trainer');
   return res.json();
 }
 // Helper to fetch employees assigned to a manager
 async function fetchManagerTeam(managerId: number) {
-  const res = await fetch(`${API_BASE_URL}/manager/${managerId}/team`);
+  const res = await apiFetch(`${API_BASE_URL}/manager/${managerId}/team`);
   if (!res.ok) throw new Error('Failed to fetch manager team');
   return res.json();
 }

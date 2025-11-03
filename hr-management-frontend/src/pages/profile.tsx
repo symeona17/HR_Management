@@ -10,6 +10,7 @@ import {
 } from '../utils/profileApi';
 import { fetchMe } from '../utils/authApi';
 import { API_BASE_URL, apiFetch } from '../utils/api';
+import { fmtNumber } from '../utils/format';
 
 const ProfilePage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -274,7 +275,7 @@ const ProfilePage: React.FC = () => {
                       <tr key={i} style={{ borderBottom: '1px solid #eee' }}>
                         <td style={{ padding: '8px 12px' }}>{a.first_name} {a.last_name}</td>
                         <td style={{ padding: '8px 12px' }}>{a.trainings_completed}</td>
-                        <td style={{ padding: '8px 12px' }}>{a.avg_feedback ? a.avg_feedback.toFixed(2) : 'N/A'}</td>
+                        <td style={{ padding: '8px 12px' }}>{fmtNumber(a.avg_feedback)}</td>
                       </tr>
                     ))
                   )}
