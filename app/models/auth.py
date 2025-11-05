@@ -87,13 +87,14 @@ def create_access_token_cookie(response: Response, data: dict, expires_delta: da
     token = create_access_token(data=data, expires_delta=expires_delta)
     # set cookie (httpOnly) - secure flag should be true in production
     secure_flag = os.getenv("ENV", "development") == "production"
+    samesite_val = "none" if secure_flag else "lax"
     max_age = int((expires_delta or datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)).total_seconds())
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
         secure=secure_flag,
-        samesite="lax",
+        samesite=samesite_val,
         max_age=max_age,
         expires=max_age,
         path='/'
