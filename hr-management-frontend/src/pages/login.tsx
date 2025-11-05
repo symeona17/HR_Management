@@ -21,8 +21,9 @@ const LoginPage: React.FC = () => {
       // Real backend login
       const loginRes = await loginBackend(email, password);
       localStorage.setItem('access_token', loginRes.access_token);
-      // Fetch user info (id, role, email)
-      const me = await fetchMe(loginRes.access_token);
+  // Fetch user info (id, role, email)
+  // fetchMe uses cookie-based session; no token argument required
+  const me = await fetchMe();
       localStorage.setItem('user_email', me.email);
       localStorage.setItem('user_role', me.role);
       localStorage.setItem('user_id', String(me.id));
