@@ -199,7 +199,7 @@ const LoginPage: React.FC = () => {
                 title={showPassword ? "Hide password" : "Show password"}
                 onClick={() => setShowPassword(prev => !prev)}
               >
-                {showPassword ? "🙈" : "👁️"}
+                {showPassword ? "🙈" : "👀"}
               </span>
             </div>
           </div>
