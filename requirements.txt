@@ -19,3 +19,6 @@ openpyxl
 pytest
 requests
 httpx
+# pin bcrypt to a compatible version to avoid passlib backend detection issues
+# (passlib expects bcrypt >= 3.1.0)
+bcrypt>=3.1.0

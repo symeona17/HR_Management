@@ -7,7 +7,7 @@ Handles JWT-based login, password hashing, and user info retrieval.
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 from pydantic import BaseModel
 import datetime
 import os
@@ -21,12 +21,55 @@ ALGORITHM = "HS256"
 # token lifetime in minutes
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+def _prepare_password_bytes(password: str) -> bytes:
+    """Encode password to UTF-8 bytes and truncate to 72 bytes (bcrypt limit).
 
-def verify_password(plain_password, hashed_password):
-    """Verify a plain password against a hashed password."""
-    return pwd_context.verify(plain_password, hashed_password)
+    bcrypt has a 72-byte input limit. Explicitly truncating here avoids
+    backend errors and ensures consistent behavior across environments.
+    """
+    if password is None:
+        return b""
+    b = password.encode("utf-8")
+    if len(b) > 72:
+        b = b[:72]
+    return b
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a plain password against a bcrypt hashed password using the bcrypt lib.
+
+    Returns True on match, False otherwise.
+    """
+    try:
+        pw = _prepare_password_bytes(plain_password)
+        if isinstance(hashed_password, str):
+            hashed_b = hashed_password.encode("utf-8")
+        else:
+            hashed_b = hashed_password
+        return bcrypt.checkpw(pw, hashed_b)
+    except Exception as e:
+        print(f"bcrypt checkpw error: {e}")
+        return False
+
+
+# Backwards-compatible helper used elsewhere in the codebase (e.g. employee.py)
+# Some modules import `pwd_context` and call `pwd_context.hash(password)`; to
+# avoid changing many files, provide a tiny compatibility object with a `hash`
+# method that uses bcrypt under the hood.
+def hash_password(password: str) -> str:
+    pw = _prepare_password_bytes(password)
+    return bcrypt.hashpw(pw, bcrypt.gensalt()).decode("utf-8")
+
+
+class _PwdContextCompat:
+    @staticmethod
+    def hash(password: str) -> str:
+        return hash_password(password)
+
+
+# Expose `pwd_context` for compatibility with previous code that used
+# `passlib.context.CryptContext`'s `hash()` method.
+pwd_context = _PwdContextCompat()
 
 def create_access_token(data: dict, expires_delta: datetime.timedelta = None):
     """Create a JWT access token with an optional expiration delta."""
