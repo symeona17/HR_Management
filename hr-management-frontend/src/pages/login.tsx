@@ -1,15 +1,32 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { loginBackend, fetchMe } from '../utils/authApi';
 
 const LoginPage: React.FC = () => {
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const router = useRouter();
+  // On mount, check if already authenticated (via fetchMe)
+  useEffect(() => {
+    fetchMe()
+      .then(user => {
+        if (user && user.id) {
+          router.replace("/dashboard");
+        } else {
+          setCheckingAuth(false);
+        }
+      })
+      .catch(() => {
+        // Not logged in, stay on login page
+        setCheckingAuth(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false); // Added for eye toggle
-  const router = useRouter();
   const [showContact, setShowContact] = useState(false);
 
 
@@ -36,6 +53,14 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  if (checkingAuth) {
+    // Optionally, show a spinner or nothing
+    return (
+      <div style={{ width: "100vw", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F5F5F5" }}>
+        <span style={{ fontFamily: "Poppins, Montserrat, sans-serif", fontSize: 18, color: "#1570EF" }}>Checking authentication...</span>
+      </div>
+    );
+  }
   return (
     <div style={{ width: "100vw", height: "100vh", background: "#F5F5F5", position: "relative", overflow: "hidden" }}>
       {/* Centered login card */}
