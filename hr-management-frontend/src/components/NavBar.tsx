@@ -273,11 +273,6 @@ const NavBar: React.FC<NavBarProps> = ({ showSearch, onSearchChange }) => {
                 <div
                   style={{ padding: '8px 16px', fontFamily: 'Montserrat', fontSize: 15, color: '#D92D20', cursor: 'pointer' }}
                   onClick={async () => {
-                    try {
-                      await apiFetch(`${API_BASE_URL}/logout`, { method: 'POST' });
-                    } catch (e) {
-                      // ignore network errors
-                    }
                     localStorage.removeItem('access_token');
                     localStorage.removeItem('user_email');
                     localStorage.removeItem('user_role');

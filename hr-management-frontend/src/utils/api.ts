@@ -2,7 +2,16 @@ export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://loc
 
 // Centralized fetch wrapper that sends credentials (cookies) for cookie-based auth
 export async function apiFetch(input: RequestInfo, init?: RequestInit) {
-    const merged: RequestInit = { credentials: 'include', ...init };
+    // Attach Authorization header if access_token is present in localStorage
+    let token = null;
+    if (typeof window !== 'undefined') {
+        token = localStorage.getItem('access_token');
+    }
+    const headers = new Headers(init?.headers || {});
+    if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+    }
+    const merged: RequestInit = { ...init, headers };
     return fetch(input, merged);
 }
 

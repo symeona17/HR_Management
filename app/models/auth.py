@@ -84,35 +84,16 @@ class Token(BaseModel):
     token_type: str
 
 def create_access_token_cookie(response: Response, data: dict, expires_delta: datetime.timedelta | None = None):
-    token = create_access_token(data=data, expires_delta=expires_delta)
-    # set cookie (httpOnly) - secure flag should be true in production
-    secure_flag = os.getenv("ENV", "development") == "production"
-    samesite_val = "none" if secure_flag else "lax"
-    max_age = int((expires_delta or datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)).total_seconds())
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        secure=secure_flag,
-        samesite=samesite_val,
-        max_age=max_age,
-        expires=max_age,
-        path='/'
-    )
-    return token
+    # Deprecated: no longer used for token-based auth
+    return create_access_token(data=data, expires_delta=expires_delta)
 
 
 def _get_token_from_request(request: Request):
-    # Prefer cookie-based token
-    token = None
-    if request.cookies.get("access_token"):
-        token = request.cookies.get("access_token")
-    else:
-        # fallback to Authorization header
-        auth: str | None = request.headers.get("authorization")
-        if auth and auth.lower().startswith("bearer "):
-            token = auth.split(" ", 1)[1]
-    return token
+    # Only use Authorization header for token auth
+    auth: str | None = request.headers.get("authorization")
+    if auth and auth.lower().startswith("bearer "):
+        return auth.split(" ", 1)[1]
+    return None
 
 
 def get_current_user(request: Request, response: Response):
@@ -132,13 +113,6 @@ def get_current_user(request: Request, response: Response):
         if not users:
             raise HTTPException(status_code=404, detail="User not found")
         user = users[0]
-        # refresh cookie to extend session (sliding expiration)
-        try:
-            expires = datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-            create_access_token_cookie(response, {"sub": user['email'], "id": user['id'], "role": user.get('role')}, expires_delta=expires)
-        except Exception:
-            # non-fatal if cookie refresh fails
-            pass
         return user
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -162,16 +136,14 @@ def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
         data={"sub": user['email'], "id": user['id'], "role": user['role']},
         expires_delta=expires
     )
-    # set httpOnly cookie
-    create_access_token_cookie(response, {"sub": user['email'], "id": user['id'], "role": user['role']}, expires_delta=expires)
+    # Do not set cookie; return token only
     return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.post("/logout")
 def logout(response: Response):
-    """Clear the session cookie to log the user out."""
-    response.delete_cookie("access_token", path='/')
-    return {"msg": "logged out"}
+    # No-op for token-based auth; logout is handled on frontend by clearing localStorage
+    return {"msg": "logged out (token-based auth)"}
 
 @router.get("/me")
 def read_users_me(current_user=Depends(get_current_user)):

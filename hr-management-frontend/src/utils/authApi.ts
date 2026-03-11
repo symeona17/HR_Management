@@ -11,7 +11,7 @@ export async function loginBackend(email: string, password: string) {
   return await res.json();
 }
 
-// Fetch current user using cookie-based session
+// Fetch current user using token-based auth
 export async function fetchMe() {
   const res = await apiFetch(`${API_BASE_URL}/me`);
   if (!res.ok) throw new Error('Failed to fetch user info');
