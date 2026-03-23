@@ -35,6 +35,9 @@ const EmployeesPage = () => {
   const [role, setRole] = useState('');
   const [userId, setUserId] = useState<number | null>(null);
   const [managerTeam, setManagerTeam] = useState<Employee[]>([]);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -44,6 +47,11 @@ const EmployeesPage = () => {
       setUserId(id ? Number(id) : null);
     }
   }, []);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [department, search]);
 
   useEffect(() => {
     if (role === 'manager' && userId) {
@@ -149,12 +157,91 @@ const EmployeesPage = () => {
           return Array.from(set);
         }, [employees, managerTeam, role])}
       />
+      {/* Pagination Controls */}
+      <div
+        style={{
+          marginLeft: 265,
+          paddingLeft: 48,
+          paddingTop: 100,
+          paddingRight: 32,
+          paddingBottom: 16,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 24,
+        }}
+      >
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <span style={{ fontSize: 14, color: '#717171', fontWeight: 500 }}>Employees per page:</span>
+          {[20, 50, 100].map(size => (
+            <button
+              key={size}
+              onClick={() => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
+              style={{
+                padding: '8px 16px',
+                fontSize: 14,
+                fontWeight: 500,
+                border: pageSize === size ? '2px #3FD270 solid' : '1px #D5D5D5 solid',
+                borderRadius: 6,
+                background: pageSize === size ? '#3FD270' : 'white',
+                color: pageSize === size ? 'white' : '#717171',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            style={{
+              padding: '8px 16px',
+              fontSize: 14,
+              fontWeight: 500,
+              border: '1px #D5D5D5 solid',
+              borderRadius: 6,
+              background: currentPage === 1 ? '#F5F5F5' : 'white',
+              color: currentPage === 1 ? '#CCCCCC' : '#717171',
+              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            ← Previous
+          </button>
+          <span style={{ fontSize: 14, color: '#717171', fontWeight: 500, minWidth: 80, textAlign: 'center' }}>
+            Page {currentPage} of {Math.ceil(((role === 'manager' ? managerTeam : filtered).length || 1) / pageSize)}
+          </span>
+          <button
+            onClick={() => setCurrentPage(p => p + 1)}
+            disabled={currentPage >= Math.ceil(((role === 'manager' ? managerTeam : filtered).length || 1) / pageSize)}
+            style={{
+              padding: '8px 16px',
+              fontSize: 14,
+              fontWeight: 500,
+              border: '1px #D5D5D5 solid',
+              borderRadius: 6,
+              background: currentPage >= Math.ceil(((role === 'manager' ? managerTeam : filtered).length || 1) / pageSize) ? '#F5F5F5' : 'white',
+              color: currentPage >= Math.ceil(((role === 'manager' ? managerTeam : filtered).length || 1) / pageSize) ? '#CCCCCC' : '#717171',
+              cursor: currentPage >= Math.ceil(((role === 'manager' ? managerTeam : filtered).length || 1) / pageSize) ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            Next →
+          </button>
+        </div>
+      </div>
       {/* Employee Cards Flex Container */}
       <div
         style={{
           marginLeft: 265,
           paddingLeft: 48,
-          paddingTop: 120,
+          paddingTop: 32,
           paddingRight: 32,
           paddingBottom: 32, // Add bottom padding equal to gap
           display: 'flex',
@@ -163,7 +250,11 @@ const EmployeesPage = () => {
           alignItems: 'flex-start',
         }}
       >
-        {(role === 'manager' ? managerTeam : filtered).map(emp => (
+        {(() => {
+          const data = role === 'manager' ? managerTeam : filtered;
+          const start = (currentPage - 1) * pageSize;
+          const end = start + pageSize;
+          return data.slice(start, end).map(emp => (
           <div
             key={emp.employee_id}
             style={{
@@ -235,7 +326,8 @@ const EmployeesPage = () => {
             {/* Email below image, left-aligned */}
             <div style={{ color: '#555', fontSize: 12, fontWeight: 400, marginLeft: 2 }}>{emp.email}</div>
           </div>
-        ))}
+        ));
+        })()}
       </div>
       <EmployeeCardOverlay
         open={showEmployeeOverlay}
