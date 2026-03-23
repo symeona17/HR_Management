@@ -53,6 +53,27 @@ const EmployeesPage = () => {
     setCurrentPage(1);
   }, [department, search]);
 
+  // Apply department and search filters
+  useEffect(() => {
+    let result = role === 'manager' ? managerTeam : employees;
+    
+    // Filter by department
+    if (department !== 'Any') {
+      result = result.filter(emp => emp.department === department);
+    }
+    
+    // Filter by search
+    if (search) {
+      result = result.filter(emp => 
+        emp.first_name.toLowerCase().includes(search.toLowerCase()) ||
+        emp.last_name.toLowerCase().includes(search.toLowerCase()) ||
+        emp.email.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+    
+    setFiltered(result);
+  }, [department, search, employees, managerTeam, role]);
+
   useEffect(() => {
     if (role === 'manager' && userId) {
       fetchManagerTeam(userId).then(data => {
@@ -117,6 +138,16 @@ const EmployeesPage = () => {
             <option key={dep} value={dep}>{dep}</option>
           ))}
         </select>
+        <div style={{ color: '#717171', fontSize: 18, fontWeight: 400, lineHeight: '18px', marginBottom: 8 }}>
+          Search
+        </div>
+        <input
+          type="text"
+          placeholder="Name, email..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ width: '100%', height: 35, borderRadius: 10, border: '1px #D5D5D5 solid', background: '#F5F5F5', fontSize: 18, padding: '0 12px', marginBottom: 24, boxSizing: 'border-box' }}
+        />
         {/* Add Employee Button only for hradmin, fixed distance from bottom */}
         {role === 'hradmin' && (
           <div style={{ marginTop: 'auto', marginBottom: 100 }}>
@@ -124,7 +155,7 @@ const EmployeesPage = () => {
               style={{
                 width: '100%',
                 height: 40,
-                background: '#3FD270',
+                background: 'rgb(25, 118, 210)',
                 color: 'white',
                 border: 'none',
                 borderRadius: 8,
@@ -184,9 +215,9 @@ const EmployeesPage = () => {
                 padding: '8px 16px',
                 fontSize: 14,
                 fontWeight: 500,
-                border: pageSize === size ? '2px #3FD270 solid' : '1px #D5D5D5 solid',
+                border: pageSize === size ? '2px rgb(25, 118, 210) solid' : '1px #D5D5D5 solid',
                 borderRadius: 6,
-                background: pageSize === size ? '#3FD270' : 'white',
+                background: pageSize === size ? 'rgb(25, 118, 210)' : 'white',
                 color: pageSize === size ? 'white' : '#717171',
                 cursor: 'pointer',
                 transition: 'all 0.2s',

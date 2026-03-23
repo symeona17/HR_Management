@@ -229,7 +229,7 @@ const AddEmployeeOverlay: React.FC<AddEmployeeOverlayProps> = ({ open, onClose, 
             </div>
             {error && <div style={{ color: 'red', fontSize: 13 }}>{error}</div>}
             {success && <div style={{ color: 'green', fontSize: 15, fontWeight: 600 }}>Employee added successfully!</div>}
-            <button type="submit" disabled={adding || success} style={{ marginTop: 8, background: '#3FD270', color: 'white', border: 'none', borderRadius: 8, fontSize: 16, fontWeight: 600, padding: '10px 0', cursor: 'pointer' }}>{adding ? 'Adding...' : success ? 'Success!' : 'Submit'}</button>
+            <button type="submit" disabled={adding || success} style={{ marginTop: 8, background: 'rgb(25, 118, 210)', color: 'white', border: 'none', borderRadius: 8, fontSize: 16, fontWeight: 600, padding: '10px 0', cursor: 'pointer' }}>{adding ? 'Adding...' : success ? 'Success!' : 'Submit'}</button>
           </div>
         </form>
       </div>
