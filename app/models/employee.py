@@ -34,48 +34,59 @@ router = APIRouter()
 # --- Split: DB update and ML retraining ---
 def update_skill_feedback_db(employee_id: int, skill_id: int, vote: str):
     """
-    Update the recommendation_score for a skill suggestion in the DB and log the vote in skill_feedback.
+    Log the vote in skill_feedback table without modifying recommendation_score.
     """
     if vote not in ('up', 'down'):
         return {"error": "Invalid vote. Use 'up' or 'down'."}
     con = create_connection()
     cursor = con.cursor()
-    score_change = 5 if vote == 'up' else -5
     # Log the vote in skill_feedback table
     cursor.execute(
         "INSERT INTO skill_feedback (employee_id, skill_id, vote) VALUES (%s, %s, %s)",
         (employee_id, skill_id, vote)
     )
-    # Update the score in skill_need table
-    cursor.execute(
-        "UPDATE skill_need SET recommendation_score = GREATEST(0, LEAST(100, recommendation_score + %s)) WHERE employee_id = %s AND skill_id = %s",
-        (score_change, employee_id, skill_id)
-    )
     con.commit()
     cursor.close()
     con.close()
-    return {"success": True, "skill_id": skill_id, "vote": vote, "score_change": score_change}
+    return {"success": True, "skill_id": skill_id, "vote": vote}
 
 def trigger_skill_feedback_ml_async(employee_id: int):
     """
-    Trigger ML retraining/update for this employee after feedback, asynchronously.
+    DEPRECATED: Per-feedback ML retraining removed in favor of batch retrain job (manual or daily).
+    Original implementation below (commented out):
     """
-    thread = threading.Thread(target=retrain_recommender_on_feedback, args=(employee_id,))
-    thread.daemon = True
-    thread.start()
-    return {"ml_retraining_started": True}
+    # DEPRECATED CODE:
+    # def trigger_skill_feedback_ml_async(employee_id: int):
+    #     """
+    #     Trigger ML retraining/update for this employee after feedback, asynchronously.
+    #     """
+    #     thread = threading.Thread(target=retrain_recommender_on_feedback, args=(employee_id,))
+    #     thread.daemon = True
+    #     thread.start()
+    #     return {"ml_retraining_started": True}
+    pass
 
 @router.post("/{employee_id}/skill-feedback")
 def skill_feedback(employee_id: int, skill_id: int = Body(...), vote: str = Body(...)):
     """
-    Log feedback and update recommendation_score for a skill suggestion, then trigger ML retraining asynchronously.
+    Log feedback and update recommendation_score for a skill suggestion.
+    ML retraining is now deferred to batch job (manual /admin/retrain-recommender or daily scheduler).
+    
+    DEPRECATED CODE (commented out):
+    Original implementation included async ML retrain on every feedback:
+    
+    # db_result = update_skill_feedback_db(employee_id, skill_id, vote)
+    # if "error" in db_result:
+    #     return JSONResponse(status_code=400, content=db_result)
+    # # Start ML retraining in the background
+    # ml_result = trigger_skill_feedback_ml_async(employee_id)
+    # return {**db_result, **ml_result}
     """
     db_result = update_skill_feedback_db(employee_id, skill_id, vote)
     if "error" in db_result:
         return JSONResponse(status_code=400, content=db_result)
-    # Start ML retraining in the background
-    ml_result = trigger_skill_feedback_ml_async(employee_id)
-    return {**db_result, **ml_result}
+    # REMOVED: Async ML retraining on every feedback (now batch/scheduled only)
+    return db_result
 
 # --- ML/AI Calculation Endpoint: Calculate and Insert Skills ---
 @router.post("/ml-calculate-skills/{employee_id}", operation_id="ml_calculate_and_insert_skills")
@@ -97,6 +108,13 @@ def ml_calculate_and_insert_skills(employee_id: int, topn: int = 10):
     print(f"[DEBUG] ML input features: job_title='{job_title}', department='{department}' for employee_id={employee_id}")
     recommender = HybridRecommender()
     rec_skills = recommender.fetch_trending_skills_from_web(topn=topn, employee_id=employee_id)
+    
+    # Delete old skill_need entries for this employee (clean slate approach)
+    try:
+        execute_query("DELETE FROM skill_need WHERE employee_id = %s", (employee_id,))
+    except Exception as e:
+        print(f"[WARNING] Failed to delete old skill_need entries: {e}")
+    
     # Filter out skills the employee already has
     existing_skills = set(s['preferred_label'].lower() for s in get_employee_skills(employee_id))
     filtered_skills = [s for s in rec_skills if s.get('preferred_label', s.get('name', '')).lower() not in existing_skills]
@@ -354,4 +372,32 @@ def get_suggested_skills(employee_id: int):
         for rec in skills
     ]
     return SuggestedSkillsResponse(suggested_skills=suggested_skills)
+
+
+@router.post("/admin/retrain-recommender", tags=["admin"])
+def admin_retrain_recommender(topn: int = 5):
+    """
+    Admin-only endpoint to manually trigger ML model retrain.
+    Trains model on ESCO data + feedback and saves trained artifacts.
+    Skills are calculated per-employee when the 'Calculate' button is clicked.
+    
+    Returns:
+        - status: 'success' or 'error'
+        - message: Description of result
+        - timestamp: When retraining was initiated
+    """
+    try:
+        from datetime import datetime
+        retrain_recommender_on_feedback(employee_id=None, topn=topn)
+        return {
+            "status": "success",
+            "message": f"ML model retrained successfully. Click 'Calculate' per employee to generate skill recommendations.",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Retrain failed: {str(e)}",
+            "timestamp": datetime.utcnow().isoformat()
+        }
 

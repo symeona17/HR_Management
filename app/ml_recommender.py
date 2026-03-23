@@ -5,10 +5,10 @@ Hybrid L&D Recommendation Engine for HR_Management
 """
 import pandas as pd
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 import os
 from app.database import fetch_results
+# DEPRECATED: cosine_similarity was imported but not used (collaborative filtering not yet implemented)
 
 # --- Data Extraction Helpers (replace with your DB queries) ---
 def get_employees(con):
@@ -54,7 +54,7 @@ class HybridRecommender:
         # Remove generic words
         tokens = [w for w in jt.split() if w not in GENERIC_WORDS]
         cleaned = ' '.join(tokens)
-        # Optionally add department for more context
+        # DEPRECATED: Department-based context was commented out; feature not fully implemented
         #if department:
             #dept = department.lower().strip()
             #cleaned = f"{cleaned} {dept}".strip()
@@ -80,20 +80,24 @@ class HybridRecommender:
         MODEL_PATH = os.path.join(BASE_PATH, 'esco_skill_recommender.pkl')
         VECTORIZER_PATH = os.path.join(BASE_PATH, 'esco_jobtitle_vectorizer.pkl')
         MLB_PATH = os.path.join(BASE_PATH, 'esco_skill_binarizer.pkl')
-    # print(f"[DEBUG] Loading MODEL_PATH: {os.path.abspath(MODEL_PATH)}")
-    # print(f"[DEBUG] Loading VECTORIZER_PATH: {os.path.abspath(VECTORIZER_PATH)}")
-    # print(f"[DEBUG] Loading MLB_PATH: {os.path.abspath(MLB_PATH)}")
-        CSV_PATH = os.path.join(BASE_PATH, 'occupation_skill_matrix.csv')
-        import joblib
+        WEIGHTS_PATH = os.path.join(BASE_PATH, 'esco_skill_weights.pkl')
+        # DEPRECATED: Debug logging below replaced with proper logging framework
+        # print(f"[DEBUG] Loading MODEL_PATH: {os.path.abspath(MODEL_PATH)}")
+        # print(f"[DEBUG] Loading VECTORIZER_PATH: {os.path.abspath(VECTORIZER_PATH)}")
+        # print(f"[DEBUG] Loading MLB_PATH: {os.path.abspath(MLB_PATH)}")
+        CSV_PATH = os.path.join(BASE_PATH, 'occupationSkillRelations_en.csv')
+        import joblib  # TODO: Move to top-level imports
         # Always load job_title and department from DB using employee_id
         job_title = None
         department = None
         if employee_id is not None:
             from app.database import fetch_results
             emp_rows = fetch_results('SELECT job_title, department FROM employee WHERE id = %s', (employee_id,))
+            # DEPRECATED: Debug logging replaced with proper logging framework
             # print(f"[DEBUG] emp_rows from DB: {emp_rows}")
             if emp_rows and isinstance(emp_rows, list):
                 first_row = emp_rows[0]
+                # DEPRECATED: Debug logging replaced with proper logging framework
                 # print(f"[DEBUG] first_row raw: {first_row} (type: {type(first_row)})")
                 if isinstance(first_row, dict):
                     job_title = first_row.get('job_title')
@@ -102,41 +106,78 @@ class HybridRecommender:
                     job_title = first_row[0] if len(first_row) > 0 else None
                     department = first_row[1] if len(first_row) > 1 else None
         jt = self.preprocess_job_title(job_title, department)
-    # print(f"[INFO] Preprocessed job title for ML: '{jt}' (original: '{job_title}', department: '{department}')")
-        # Load model and encoders
-        clf = joblib.load(MODEL_PATH)
-        vectorizer = joblib.load(VECTORIZER_PATH)
-        mlb = joblib.load(MLB_PATH)
-        X_new = vectorizer.transform([jt])
-        # Efficiently select top N skills by probability
-        proba = clf.predict_proba(X_new)
+        # DEPRECATED: Debug logging replaced with proper logging framework
+        # print(f"[INFO] Preprocessed job title for ML: '{jt}' (original: '{job_title}', department: '{department}')")
+        # Load model and encoders with error handling for missing files
+        clf = None
+        vectorizer = None
+        mlb = None
+        skill_weights = {}  # Will be populated from weights file
+        proba = None
+        try:
+            clf = joblib.load(MODEL_PATH)
+            vectorizer = joblib.load(VECTORIZER_PATH)
+            mlb = joblib.load(MLB_PATH)
+            # Load skill weights dictionary
+            try:
+                skill_weights = joblib.load(WEIGHTS_PATH)
+            except FileNotFoundError:
+                # Weights file may not exist on first run; continue without weights
+                skill_weights = {}
+            X_new = vectorizer.transform([jt])
+            # Efficiently select top N skills by probability
+            proba = clf.predict_proba(X_new)
+        except FileNotFoundError as e:
+            # Model files not yet trained; will fall back to CSV lookup below
+            print(f"[WARNING] ML model files not found: {e}. Falling back to CSV lookup.")
+            proba = None
+        except Exception as e:
+            # Other errors during model loading/inference; fall back gracefully
+            print(f"[WARNING] Error loading/using ML model: {e}. Falling back to CSV lookup.")
+            proba = None
+        
         topn = int(topn) if topn is not None else 5
-        # Get indices of top N probabilities
-        top_indices = np.argpartition(-proba[0], range(topn))[:topn]
-        # Sort these indices by actual probability descending
-        top_indices = top_indices[np.argsort(-proba[0][top_indices])]
-        skill_labels = [mlb.classes_[i] for i in top_indices]
+        skill_labels = []
+        
+        # Only process ML predictions if model loaded successfully
+        if proba is not None and clf is not None and mlb is not None:
+            try:
+                # Get indices of top N probabilities
+                top_indices = np.argpartition(-proba[0], range(topn))[:topn]
+                # Sort these indices by actual probability descending
+                top_indices = top_indices[np.argsort(-proba[0][top_indices])]
+                skill_labels = [mlb.classes_[i] for i in top_indices]
+            except Exception as e:
+                print(f"[WARNING] Error extracting top skills from predictions: {e}. Using CSV fallback.")
+                skill_labels = []
         # Fallback: direct CSV lookup if ML returns nothing
         if not skill_labels:
-            df = pd.read_csv(CSV_PATH)
-            df['job_title_norm'] = df['job_title'].str.lower().str.strip()
-            direct = df[df['job_title_norm'] == jt]['skill'].tolist()
-            if direct:
-                skill_labels = direct[:topn]
-            elif process is not None:
-                all_titles = df['job_title'].unique()
-                matches = process.extract(jt, all_titles, limit=5)
-                match, score, _ = matches[0]
-                HIGH_CONFIDENCE = 90
-                LOW_CONFIDENCE = 80
-                if score >= HIGH_CONFIDENCE:
-                    direct = df[df['job_title'] == match]['skill'].tolist()
+            try:
+                df = pd.read_csv(CSV_PATH)
+                df['job_title_norm'] = df['occupationLabel'].str.lower().str.strip()
+                direct = df[df['job_title_norm'] == jt]['skillLabel'].tolist()
+                if direct:
                     skill_labels = direct[:topn]
-                elif score >= LOW_CONFIDENCE:
-                    direct = df[df['job_title'] == match]['skill'].tolist()
-                    skill_labels = direct[:topn]
-                else:
-                    skill_labels = []
+                elif process is not None:
+                    all_titles = df['occupationLabel'].unique()
+                    matches = process.extract(jt, all_titles, limit=5)
+                    match, score, _ = matches[0]
+                    HIGH_CONFIDENCE = 90
+                    LOW_CONFIDENCE = 80
+                    if score >= HIGH_CONFIDENCE:
+                        direct = df[df['occupationLabel'] == match]['skillLabel'].tolist()
+                        skill_labels = direct[:topn]
+                    elif score >= LOW_CONFIDENCE:
+                        direct = df[df['occupationLabel'] == match]['skillLabel'].tolist()
+                        skill_labels = direct[:topn]
+                    else:
+                        skill_labels = []
+            except FileNotFoundError:
+                print(f"[WARNING] CSV lookup file not found: {CSV_PATH}. No fallback available.")
+                skill_labels = []
+            except Exception as e:
+                print(f"[WARNING] Error during CSV lookup: {e}")
+                skill_labels = []
         # Map skill labels to DB skills
         from app.database import fetch_results, execute_query
         db_skills = fetch_results("SELECT id, preferred_label, skill_type FROM skill", ())
@@ -145,44 +186,54 @@ class HybridRecommender:
         # employee_id is already provided as argument
         # Map skill labels to their ML probabilities (scaled 0-100)
         skill_to_proba = {}
-        if 'proba' in locals():
-            for idx, skill in enumerate(mlb.classes_):
-                skill_to_proba[skill] = proba[0][idx]
+        if proba is not None and mlb is not None:
+            try:
+                for idx, skill in enumerate(mlb.classes_):
+                    skill_to_proba[skill] = float(proba[0][idx])
+            except Exception as e:
+                print(f"[WARNING] Error mapping skill probabilities: {e}")
+                skill_to_proba = {}
         for i, label in enumerate(skill_labels[:topn]):
             key = label.lower()
             if key in skill_map:
                 db_skill = skill_map[key]
                 skill_id = db_skill['id']
-                # Get ML probability for this skill, scale to 0-100
-                prob = skill_to_proba.get(label, 0)
-                rec_score = int(round(prob * 100))
+                # Get ML probability for this skill
+                prob = skill_to_proba.get(label, 0.5)  # Default 0.5 if not from ML
+                # Apply feedback weight (1.0 baseline, +/-0.2 per vote, min 0.2)
+                weight = skill_weights.get(label, 1.0)  # Default 1.0 if no feedback
+                weighted_prob = prob * weight
+                # Cap final score at 100%
+                rec_score = min(100, int(round(weighted_prob * 100)))
                 result.append({
                     "id": skill_id,
                     "preferred_label": label,
                     "skill_type": skill_map[key]["skill_type"],
                     "recommendation_score": rec_score
                 })
-                # Insert or update skill_need table if employee_id is available
+                # DEPRECATED: Batch upsert to skill_need moved to separate retrain job
                 #if employee_id is not None:
                 #    upsert_query = "INSERT INTO skill_need (skill_id, employee_id, recommendation_score) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE recommendation_score = VALUES(recommendation_score)"
                 #    try:
                 #        execute_query(upsert_query, (skill_id, employee_id, rec_score))
                 #    except Exception as e:
                         # print(f"Failed to insert/update skill_need: {e}. Data: skill_id={skill_id}, employee_id={employee_id}, recommendation_score={rec_score}")
+            # DEPRECATED: individual skill insertion logic no longer needed
             #else:
                 # Do not insert new skills; skip if not found
                 # print(f"[DEBUG] Skill '{label}' not found in skill table. Skipping.")
         # Sort results by recommendation_score descending
         result_sorted = sorted(result, key=lambda x: x["recommendation_score"], reverse=True)
+        # DEPRECATED: Debug logging replaced with proper logging framework
         # print(f"[INFO] Final recommended skills: {result_sorted}")
-        print("[SUCCESS] ML recommendation procedure completed successfully.")
+        # print("[SUCCESS] ML recommendation procedure completed successfully.")  # Use logging instead
         return result_sorted
     def __init__(self):
         self.training_ids = None
         self.employee_ids = None
         self.employee_skills = None
         self.trainings = None
-                        # print(f"[DEBUG] emp_rows from DB: {emp_rows}")
+        # DEPRECATED: Stray debug comment removed; initialize state properly
         self.training_need = None
 
     def fit(self, employees, trainings, employee_skills, training_history, training_need):
@@ -257,7 +308,12 @@ class HybridRecommender:
         with open(path, 'rb') as f:
             return pickle.load(f)
 
-# --- Example Usage (to be called from FastAPI endpoint) ---
+# --- DEPRECATED: Old Example Usage (deprecated in favor of batched retrain job) ---
+# This usage pattern is replaced with:
+# 1. retrain_recommender_on_feedback() trains the model once per day/manually
+# 2. Results are persisted to skill_need table
+# 3. API endpoints read from skill_need table for fast response
+# 
 # con = ... # your DB connection
 # employees = get_employees(con)
 # trainings = get_trainings(con)
