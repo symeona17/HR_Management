@@ -3,10 +3,7 @@ from fastapi import FastAPI, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
 import logging
-
 
 from app.models.employee import router as employee_router
 from app.models.skill import router as skills_router
@@ -42,34 +39,6 @@ app.add_middleware(
 )
 
 protected = [Depends(get_current_user)]
-
-# --- Daily ML Retrain Scheduler ---
-scheduler = BackgroundScheduler()
-
-def scheduled_retrain_job():
-    """Background job to retrain ML model and populate skill_need daily."""
-    try:
-        from app.ml_feedback_training import retrain_recommender_on_feedback
-        logging.info("[Scheduler] Starting daily ML retrain job...")
-        retrain_recommender_on_feedback(employee_id=None, topn=5)
-        logging.info("[Scheduler] Daily ML retrain job completed successfully.")
-    except Exception as e:
-        logging.error(f"[Scheduler] Daily ML retrain job failed: {e}")
-
-# Schedule daily retrain at 2:00 AM
-scheduler.add_job(scheduled_retrain_job, CronTrigger(hour=2, minute=0))
-
-@app.on_event("startup")
-def start_scheduler():
-    """Start the background scheduler when app starts."""
-    scheduler.start()
-    logging.info("Scheduler started. Daily retrain job scheduled for 2:00 AM UTC.")
-
-@app.on_event("shutdown")
-def shutdown_scheduler():
-    """Shutdown the scheduler when app stops."""
-    scheduler.shutdown()
-    logging.info("Scheduler shutdown.")
 
 app.include_router(employee_router, prefix="/employee", tags=["employee"], dependencies=protected)
 app.include_router(skills_router, prefix="/skill", tags=["skill"], dependencies=protected)

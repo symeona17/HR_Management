@@ -386,18 +386,24 @@ def admin_retrain_recommender(topn: int = 5):
         - message: Description of result
         - timestamp: When retraining was initiated
     """
+    from datetime import datetime
     try:
-        from datetime import datetime
         retrain_recommender_on_feedback(employee_id=None, topn=topn)
-        return {
-            "status": "success",
-            "message": f"ML model retrained successfully. Click 'Calculate' per employee to generate skill recommendations.",
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "message": f"ML model retrained successfully. Click 'Calculate' per employee to generate skill recommendations.",
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        )
     except Exception as e:
-        return {
-            "status": "error",
-            "message": f"Retrain failed: {str(e)}",
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "message": f"Retrain failed: {str(e)}",
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        )
 
