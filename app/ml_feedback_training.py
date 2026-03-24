@@ -103,7 +103,7 @@ def retrain_recommender_on_feedback(employee_id: int = None, topn: int = 10):
     job_titles = list(job_to_skills.keys())
     skill_lists = [list(skills) for skills in job_to_skills.values()]
     
-    # Clean up feedback and job_to_skills data early to free memory before training
+    # Clean up feedback data early to free memory before training
     del feedback_df, feedback_data, job_to_skills
     gc.collect()
 
@@ -117,7 +117,7 @@ def retrain_recommender_on_feedback(employee_id: int = None, topn: int = 10):
     Y = mlb.fit_transform(skill_lists)
     
     # Delete source data to free memory before training
-    del job_titles, skill_lists, df
+    del job_titles, skill_lists
     gc.collect()
     
     # liblinear is more memory-efficient than default 'lbfgs' solver
@@ -125,8 +125,8 @@ def retrain_recommender_on_feedback(employee_id: int = None, topn: int = 10):
     clf.fit(X, Y)
     print(f"[Retrain] ✓ Model training complete")
     
-    # Clear X and Y data to free memory before saving
-    del X, Y
+    # Clear intermediate data to free memory before saving
+    del X, Y, job_titles, skill_lists, df, feedback_df, job_to_skills
     gc.collect()
 
     # --- 6. Save model and encoders ---
