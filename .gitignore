@@ -26,7 +26,8 @@ node_modules/
 hr-management-frontend/next.config.js
 
 #Data
-data/
+data/*.pkl
+data/*.pickle*
 
 #Scripts
 scripts/
