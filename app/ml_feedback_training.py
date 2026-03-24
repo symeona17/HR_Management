@@ -26,13 +26,14 @@ def retrain_recommender_on_feedback(employee_id: int = None, topn: int = 10):
     import joblib
     import os
     import time
+    import gc
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.preprocessing import MultiLabelBinarizer
     from sklearn.multiclass import OneVsRestClassifier
     from sklearn.linear_model import LogisticRegression
 
     start_time = time.time()
-    print("[Retrain] Starting ML model retrain...")
+    print("[Retrain] Starting ML model retrain (memory-conscious mode)...")
 
     # --- 1. Load ESCO data ---
     print("[Retrain] Loading ESCO CSV data...")
@@ -41,9 +42,14 @@ def retrain_recommender_on_feedback(employee_id: int = None, topn: int = 10):
     MODEL_PATH = os.path.join(BASE_PATH, 'esco_skill_recommender.pkl')
     VECTORIZER_PATH = os.path.join(BASE_PATH, 'esco_jobtitle_vectorizer.pkl')
     MLB_PATH = os.path.join(BASE_PATH, 'esco_skill_binarizer.pkl')
-    df = pd.read_csv(DATA_PATH)
+    # Load only needed columns to reduce memory
+    df = pd.read_csv(DATA_PATH, usecols=['occupationLabel', 'skillLabel'])
     df['job_title_norm'] = df['occupationLabel'].str.lower().str.strip()
     print(f"[Retrain] ✓ Loaded {len(df)} occupation-skill relationships")
+    
+    # Clean up memory after loading (occupationLabel no longer needed)
+    df = df[['job_title_norm', 'skillLabel']]
+    gc.collect()
 
     # --- 2. Aggregate user feedback from skill_feedback table ---
     print("[Retrain] Aggregating user feedback...")
@@ -98,14 +104,21 @@ def retrain_recommender_on_feedback(employee_id: int = None, topn: int = 10):
     skill_lists = [list(skills) for skills in job_to_skills.values()]
 
     # --- 5. Train model ---
-    print("[Retrain] Training ML model...")
+    print("[Retrain] Training ML model (full quality, memory-conscious)...")
+    # Original quality: no feature limit, but use liblinear solver for memory efficiency
     vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1,1))
     X = vectorizer.fit_transform(job_titles)
+    print(f"[Retrain]   TF-IDF vocabulary size: {len(vectorizer.get_feature_names_out())}")
     mlb = MultiLabelBinarizer()
     Y = mlb.fit_transform(skill_lists)
-    clf = OneVsRestClassifier(LogisticRegression(max_iter=2000, C=10))
+    # liblinear is more memory-efficient than default 'lbfgs' solver
+    clf = OneVsRestClassifier(LogisticRegression(max_iter=2000, C=10, solver='liblinear', n_jobs=1))
     clf.fit(X, Y)
     print(f"[Retrain] ✓ Model training complete")
+    
+    # Clear intermediate data to free memory before saving
+    del X, Y, job_titles, skill_lists, df, feedback_df, job_to_skills
+    gc.collect()
 
     # --- 6. Save model and encoders ---
     print("[Retrain] Saving model artifacts...")
@@ -117,6 +130,10 @@ def retrain_recommender_on_feedback(employee_id: int = None, topn: int = 10):
     WEIGHTS_PATH = os.path.join(BASE_PATH, 'esco_skill_weights.pkl')
     joblib.dump(skill_weights, WEIGHTS_PATH)
     print(f"[Retrain] ✓ Saved 4 files to {BASE_PATH} (model + weights)")
+    
+    # Clean up to free memory
+    del clf, vectorizer, mlb, skill_weights
+    gc.collect()
 
     elapsed = time.time() - start_time
     print(f"[Retrain] ✓ Complete! Model trained in {elapsed:.1f}s")
