@@ -116,7 +116,7 @@ def retrain_recommender_on_feedback(employee_id: int = None, topn: int = 10):
     mlb = MultiLabelBinarizer()
     Y = mlb.fit_transform(skill_lists)
     # liblinear is more memory-efficient than default 'lbfgs' solver
-    clf = OneVsRestClassifier(LogisticRegression(max_iter=2000, C=10, solver='liblinear', n_jobs=1))
+    clf = OneVsRestClassifier(LogisticRegression(max_iter=2000, C=10, solver='liblinear'))
     clf.fit(X, Y)
     print(f"[Retrain] ✓ Model training complete")
 
